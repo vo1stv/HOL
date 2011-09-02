@@ -6,9 +6,9 @@
 signature folMapping =
 sig
 
-type 'a pp    = 'a mlibUseful.pp
+type 'a pp    = 'a mlibPrint.pp
 type term1    = mlibTerm.term
-type formula1 = mlibTerm.formula
+type formula1 = mlibFormula.formula
 type thm1     = mlibThm.thm
 type hol_type = Type.hol_type
 type term     = Term.term
