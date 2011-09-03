@@ -598,7 +598,7 @@ fun zipWith f =
         | z l (x :: xs) (y :: ys) = z (f x y :: l) xs ys
         | z _ _ _ = raise Error "zipWith: lists different lengths";
     in
-      fn xs => fn ys => rev (z [] xs ys)
+      fn xs => fn ys => List.rev (z [] xs ys)
     end;
 
 fun zip xs ys = zipWith pair xs ys;
@@ -606,7 +606,7 @@ fun zip xs ys = zipWith pair xs ys;
 local
   fun inc ((x,y),(xs,ys)) = (x :: xs, y :: ys);
 in
-  fun unzip ab = List.foldl inc ([],[]) (rev ab);
+  fun unzip ab = List.foldl inc ([],[]) (List.rev ab);
 end;
 
 fun cartwith f =
@@ -617,15 +617,15 @@ fun cartwith f =
           aux xsCopy (f x y :: res) xt ys
     in
       fn xs => fn ys =>
-         let val xs' = rev xs in aux xs' [] xs' (rev ys) end
+         let val xs' = List.rev xs in aux xs' [] xs' (List.rev ys) end
     end;
 
 fun cart xs ys = cartwith pair xs ys;
 
 fun takeWhile p =
     let
-      fun f acc [] = rev acc
-        | f acc (x :: xs) = if p x then f (x :: acc) xs else rev acc
+      fun f acc [] = List.rev acc
+        | f acc (x :: xs) = if p x then f (x :: acc) xs else List.rev acc
     in
       f []
     end;
@@ -640,8 +640,8 @@ fun dropWhile p =
 
 fun divideWhile p =
     let
-      fun f acc [] = (rev acc, [])
-        | f acc (l as x :: xs) = if p x then f (x :: acc) xs else (rev acc, l)
+      fun f acc [] = (List.rev acc, [])
+        | f acc (l as x :: xs) = if p x then f (x :: acc) xs else (List.rev acc, l)
     in
       f []
     end;
@@ -652,15 +652,15 @@ fun groups f =
           case l of
             [] =>
             let
-              val acc = if List.null row then acc else rev row :: acc
+              val acc = if List.null row then acc else List.rev row :: acc
             in
-              rev acc
+              List.rev acc
             end
           | h :: t =>
             let
               val (eor,x) = f (h,x)
             in
-              if eor then group (rev row :: acc) [h] x t
+              if eor then group (List.rev row :: acc) [h] x t
               else group acc (h :: row) x t
             end
     in
@@ -711,7 +711,7 @@ in
   fun revDivide l = revDiv [] l;
 end;
 
-fun divide l n = let val (a,b) = revDivide l n in (rev a, b) end;
+fun divide l n = let val (a,b) = revDivide l n in (List.rev a, b) end;
 
 fun updateNth (n,x) l =
     let
@@ -740,28 +740,28 @@ fun delete x s = List.filter (not o equal x) s;
 local
   fun inc (v,x) = if mem v x then x else v :: x;
 in
-  fun setify s = rev (List.foldl inc [] s);
+  fun setify s = List.rev (List.foldl inc [] s);
 end;
 
 fun union s t =
     let
       fun inc (v,x) = if mem v t then x else v :: x
     in
-      List.foldl inc t (rev s)
+      List.foldl inc t (List.rev s)
     end;
 
 fun intersect s t =
     let
       fun inc (v,x) = if mem v t then v :: x else x
     in
-      List.foldl inc [] (rev s)
+      List.foldl inc [] (List.rev s)
     end;
 
 fun difference s t =
     let
       fun inc (v,x) = if mem v t then x else v :: x
     in
-      List.foldl inc [] (rev s)
+      List.foldl inc [] (List.rev s)
     end;
 
 fun subset s t = List.all (fn x => mem x t) s;
@@ -805,13 +805,13 @@ fun merge cmp =
 
 fun sort cmp =
     let
-      fun findRuns acc r rs [] = rev (rev (r :: rs) :: acc)
+      fun findRuns acc r rs [] = List.rev (List.rev (r :: rs) :: acc)
         | findRuns acc r rs (x :: xs) =
           case cmp (r,x) of
-            GREATER => findRuns (rev (r :: rs) :: acc) x [] xs
+            GREATER => findRuns (List.rev (r :: rs) :: acc) x [] xs
           | _ => findRuns acc x (r :: rs) xs
 
-      fun mergeAdj acc [] = rev acc
+      fun mergeAdj acc [] = List.rev acc
         | mergeAdj acc (xs as [_]) = List.revAppend (acc,xs)
         | mergeAdj acc (x :: y :: xs) = mergeAdj (merge cmp x y :: acc) xs
 
@@ -952,7 +952,7 @@ local
         [] => []
       | h :: t => if Char.isSpace h then chop t else l;
 in
-  val trim = String.implode o chop o rev o chop o rev o String.explode;
+  val trim = String.implode o chop o List.rev o chop o List.rev o String.explode;
 end;
 
 val join = String.concatWith;
@@ -969,11 +969,11 @@ in
       let
         val pat = String.explode sep
 
-        fun div1 prev recent [] = stringify [] (rev recent :: prev)
+        fun div1 prev recent [] = stringify [] (List.rev recent :: prev)
           | div1 prev recent (l as h :: t) =
             case match pat l of
               NONE => div1 prev (h :: recent) t
-            | SOME rest => div1 (rev recent :: prev) [] rest
+            | SOME rest => div1 (List.rev recent :: prev) [] rest
       in
         fn s => div1 [] [] (String.explode s)
       end;
@@ -1182,7 +1182,7 @@ fun readDirectory {directory = dir} =
 
       val () = OS.FileSys.closeDir dirStrm
     in
-      rev filenames
+      List.rev filenames
     end;
 
 fun readTextFile {filename} =
@@ -1617,7 +1617,7 @@ fun concatList [] = Nil
   | concatList (h :: t) = append h (fn () => concatList t);
 
 local
-  fun toLst res Nil = rev res
+  fun toLst res Nil = List.rev res
     | toLst res (Cons (x, xs)) = toLst (x :: res) (xs ());
 in
   fun toList s = toLst [] s;
@@ -3936,41 +3936,12 @@ sig
 val escapeString : {escape : char list} -> string -> string
 
 (* ------------------------------------------------------------------------- *)
-(* A type of strings annotated with their size.                              *)
-(* ------------------------------------------------------------------------- *)
-
-type stringSize = string * int
-
-val mkStringSize : string -> stringSize
-
-(* ------------------------------------------------------------------------- *)
 (* A type of pretty-printers.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-datatype breakStyle = Consistent | Inconsistent
+type ppstream
 
-datatype step =
-    BeginBlock of breakStyle * int
-  | EndBlock
-  | AddString of stringSize
-  | AddBreak of int
-  | AddNewline
-
-type ppstream = step mlibStream.stream
-
-(* ------------------------------------------------------------------------- *)
-(* Pretty-printer primitives.                                                *)
-(* ------------------------------------------------------------------------- *)
-
-val beginBlock : breakStyle -> int -> ppstream
-
-val endBlock : ppstream
-
-val addString : stringSize -> ppstream
-
-val addBreak : int -> ppstream
-
-val addNewline : ppstream
+type 'a pp = 'a -> ppstream
 
 val skip : ppstream
 
@@ -3982,27 +3953,74 @@ val program : ppstream list -> ppstream
 
 val stream : ppstream mlibStream.stream -> ppstream
 
-val block : breakStyle -> int -> ppstream -> ppstream
-
-val blockProgram : breakStyle -> int -> ppstream list -> ppstream
+val ppPpstream : ppstream pp
 
 (* ------------------------------------------------------------------------- *)
-(* Executing pretty-printers to generate lines.                              *)
+(* Pretty-printing blocks.                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val execute :
-    {lineLength : int} -> ppstream ->
-    {indent : int, line : string} mlibStream.stream
+datatype style = Consistent | Inconsistent
+
+datatype block =
+    Block of
+      {style : style,
+       indent : int}
+
+val styleBlock : block -> style
+
+val indentBlock : block -> int
+
+val block : block -> ppstream -> ppstream
+
+val consistentBlock : int -> ppstream list -> ppstream
+
+val inconsistentBlock : int -> ppstream list -> ppstream
+
+(* ------------------------------------------------------------------------- *)
+(* Words are unbreakable strings annotated with their effective size.        *)
+(* ------------------------------------------------------------------------- *)
+
+datatype word = Word of {word : string, size : int}
+
+val mkWord : string -> word
+
+val emptyWord : word
+
+val charWord : char -> word
+
+val ppWord : word pp
+
+val space : ppstream
+
+val spaces : int -> ppstream
+
+(* ------------------------------------------------------------------------- *)
+(* Possible line breaks.                                                     *)
+(* ------------------------------------------------------------------------- *)
+
+datatype break = Break of {size : int, extraIndent : int}
+
+val mkBreak : int -> break
+
+val ppBreak : break pp
+
+val break : ppstream
+
+val breaks : int -> ppstream
+
+(* ------------------------------------------------------------------------- *)
+(* Forced line breaks.                                                       *)
+(* ------------------------------------------------------------------------- *)
+
+val newline : ppstream
+
+val newlines : int -> ppstream
 
 (* ------------------------------------------------------------------------- *)
 (* Pretty-printer combinators.                                               *)
 (* ------------------------------------------------------------------------- *)
 
-type 'a pp = 'a -> ppstream
-
 val ppMap : ('a -> 'b) -> 'b pp -> 'a pp
-
-val ppString : string pp
 
 val ppBracket : string -> string -> 'a pp -> 'a pp
 
@@ -4021,6 +4039,8 @@ val ppOpStream : string -> 'a pp -> 'a mlibStream.stream pp
 (* ------------------------------------------------------------------------- *)
 
 val ppChar : char pp
+
+val ppString : string pp
 
 val ppEscapeString : {escape : char list} -> string pp
 
@@ -4047,12 +4067,6 @@ val ppOption : 'a pp -> 'a option pp
 val ppPair : 'a pp -> 'b pp -> ('a * 'b) pp
 
 val ppTriple : 'a pp -> 'b pp -> 'c pp -> ('a * 'b * 'c) pp
-
-val ppBreakStyle : breakStyle pp
-
-val ppStep : step pp
-
-val ppPpstream : ppstream pp
 
 val ppException : exn pp
 
@@ -4083,14 +4097,28 @@ val ppInfixes :
     ('a * bool) pp -> ('a * bool) pp
 
 (* ------------------------------------------------------------------------- *)
-(* Executing pretty-printers with a global line length.                      *)
+(* Pretty-printer rendering.                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+val render :
+    {lineLength : int option} -> ppstream ->
+    {indent : int, line : string} mlibStream.stream
+
+val toStringWithLineLength :
+    {lineLength : int option} -> 'a pp -> 'a -> string
+
+val toStreamWithLineLength :
+    {lineLength : int option} -> 'a pp -> 'a -> string mlibStream.stream
+
+val toLine : 'a pp -> 'a -> string
+
+(* ------------------------------------------------------------------------- *)
+(* Pretty-printer rendering with a global line length.                       *)
 (* ------------------------------------------------------------------------- *)
 
 val lineLength : int ref
 
 val toString : 'a pp -> 'a -> string
-
-val toLine : 'a pp -> 'a -> string
 
 val toStream : 'a pp -> 'a -> string mlibStream.stream
 
@@ -4125,7 +4153,7 @@ fun revAppend xs s =
 fun revConcat strm =
     case strm of
       mlibStream.Nil => mlibStream.Nil
-    | mlibStream.Cons (h,t) => revAppend h (revConcat o t);
+    | mlibStream.Cons (h,t) => revAppend h (fn () => revConcat (t ()));
 
 local
   fun calcSpaces n = nChars #" " n;
@@ -4161,56 +4189,127 @@ fun escapeString {escape} =
     end;
 
 (* ------------------------------------------------------------------------- *)
-(* A type of strings annotated with their size.                              *)
+(* Pretty-printing blocks.                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-type stringSize = string * int;
+datatype style = Consistent | Inconsistent;
 
-fun mkStringSize s = (s, size s);
+datatype block =
+    Block of
+      {style : style,
+       indent : int};
 
-val emptyStringSize = mkStringSize "";
+fun toStringStyle style =
+    case style of
+      Consistent => "Consistent"
+    | Inconsistent => "Inconsistent";
+
+fun isConsistentStyle style =
+    case style of
+      Consistent => true
+    | Inconsistent => false;
+
+fun isInconsistentStyle style =
+    case style of
+      Inconsistent => true
+    | Consistent => false;
+
+fun mkBlock style indent =
+    Block
+      {style = style,
+       indent = indent};
+
+val mkConsistentBlock = mkBlock Consistent;
+
+val mkInconsistentBlock = mkBlock Inconsistent;
+
+fun styleBlock (Block {style = x, ...}) = x;
+
+fun indentBlock (Block {indent = x, ...}) = x;
+
+fun isConsistentBlock block = isConsistentStyle (styleBlock block);
+
+fun isInconsistentBlock block = isInconsistentStyle (styleBlock block);
+
+(* ------------------------------------------------------------------------- *)
+(* Words are unbreakable strings annotated with their effective size.        *)
+(* ------------------------------------------------------------------------- *)
+
+datatype word = Word of {word : string, size : int};
+
+fun mkWord s = Word {word = s, size = String.size s};
+
+val emptyWord = mkWord "";
+
+fun charWord c = mkWord (str c);
+
+fun spacesWord i = Word {word = nSpaces i, size = i};
+
+fun sizeWord (Word {size = x, ...}) = x;
+
+fun renderWord (Word {word = x, ...}) = x;
+
+(* ------------------------------------------------------------------------- *)
+(* Possible line breaks.                                                     *)
+(* ------------------------------------------------------------------------- *)
+
+datatype break = Break of {size : int, extraIndent : int};
+
+fun mkBreak n = Break {size = n, extraIndent = 0};
+
+fun sizeBreak (Break {size = x, ...}) = x;
+
+fun extraIndentBreak (Break {extraIndent = x, ...}) = x;
+
+fun renderBreak b = nSpaces (sizeBreak b);
+
+fun updateSizeBreak size break =
+    let
+      val Break {size = _, extraIndent} = break
+    in
+      Break
+        {size = size,
+         extraIndent = extraIndent}
+    end;
+
+fun appendBreak break1 break2 =
+    let
+(*BasicDebug
+      val () = warn "merging consecutive pretty-printing breaks"
+*)
+      val Break {size = size1, extraIndent = extraIndent1} = break1
+      and Break {size = size2, extraIndent = extraIndent2} = break2
+
+      val size = size1 + size2
+      and extraIndent = Int.max (extraIndent1,extraIndent2)
+    in
+      Break
+        {size = size,
+         extraIndent = extraIndent}
+    end;
 
 (* ------------------------------------------------------------------------- *)
 (* A type of pretty-printers.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-datatype breakStyle = Consistent | Inconsistent;
-
 datatype step =
-    BeginBlock of breakStyle * int
+    BeginBlock of block
   | EndBlock
-  | AddString of stringSize
-  | AddBreak of int
+  | AddWord of word
+  | AddBreak of break
   | AddNewline;
 
 type ppstream = step mlibStream.stream;
 
-fun breakStyleToString style =
-    case style of
-      Consistent => "Consistent"
-    | Inconsistent => "Inconsistent";
+type 'a pp = 'a -> ppstream;
 
-fun stepToString step =
+fun toStringStep step =
     case step of
       BeginBlock _ => "BeginBlock"
     | EndBlock => "EndBlock"
-    | AddString _ => "AddString"
-    | AddBreak _ => "AddBreak"
-    | AddNewline => "AddNewline";
-
-(* ------------------------------------------------------------------------- *)
-(* Pretty-printer primitives.                                                *)
-(* ------------------------------------------------------------------------- *)
-
-fun beginBlock style indent = mlibStream.singleton (BeginBlock (style,indent));
-
-val endBlock = mlibStream.singleton EndBlock;
-
-fun addString s = mlibStream.singleton (AddString s);
-
-fun addBreak spaces = mlibStream.singleton (AddBreak spaces);
-
-val addNewline = mlibStream.singleton AddNewline;
+    | AddWord _ => "Word"
+    | AddBreak _ => "Break"
+    | AddNewline => "Newline";
 
 val skip : ppstream = mlibStream.Nil;
 
@@ -4219,735 +4318,90 @@ fun sequence pp1 pp2 : ppstream = mlibStream.append pp1 (K pp2);
 local
   fun dup pp n () = if n = 1 then pp else mlibStream.append pp (dup pp (n - 1));
 in
-  fun duplicate n pp = if n = 0 then skip else dup pp n ();
+  fun duplicate n pp : ppstream =
+      let
+(*BasicDebug
+        val () = if 0 <= n then () else raise Bug "mlibPrint.duplicate"
+*)
+      in
+        if n = 0 then skip else dup pp n ()
+      end;
 end;
 
 val program : ppstream list -> ppstream = mlibStream.concatList;
 
 val stream : ppstream mlibStream.stream -> ppstream = mlibStream.concat;
 
-fun block style indent pp = program [beginBlock style indent, pp, endBlock];
-
-fun blockProgram style indent pps = block style indent (program pps);
-
 (* ------------------------------------------------------------------------- *)
-(* Executing pretty-printers to generate lines.                              *)
+(* Pretty-printing blocks.                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-datatype blockBreakStyle =
-    InconsistentBlock
-  | ConsistentBlock
-  | BreakingBlock;
-
-datatype block =
-    Block of
-      {indent : int,
-       style : blockBreakStyle,
-       size : int,
-       chunks : chunk list}
-
-and chunk =
-    StringChunk of {size : int, string : string}
-  | BreakChunk of int
-  | BlockChunk of block;
-
-datatype state =
-    State of
-      {blocks : block list,
-       lineIndent : int,
-       lineSize : int};
-
-val initialIndent = 0;
-
-val initialStyle = Inconsistent;
-
-fun liftStyle style =
-    case style of
-      Inconsistent => InconsistentBlock
-    | Consistent => ConsistentBlock;
-
-fun breakStyle style =
-    case style of
-      ConsistentBlock => BreakingBlock
-    | _ => style;
-
-fun sizeBlock (Block {size,...}) = size;
-
-fun sizeChunk chunk =
-    case chunk of
-      StringChunk {size,...} => size
-    | BreakChunk spaces => spaces
-    | BlockChunk block => sizeBlock block;
-
-val splitChunks =
-    let
-      fun split _ [] = NONE
-        | split acc (chunk :: chunks) =
-          case chunk of
-            BreakChunk _ => SOME (rev acc, chunks)
-          | _ => split (chunk :: acc) chunks
-    in
-      split []
-    end;
-
-val sizeChunks = List.foldl (fn (c,z) => sizeChunk c + z) 0;
-
 local
-  fun flatten acc chunks =
-      case chunks of
-        [] => rev acc
-      | chunk :: chunks =>
-        case chunk of
-          StringChunk {string = s, ...} => flatten (s :: acc) chunks
-        | BreakChunk n => flatten (nSpaces n :: acc) chunks
-        | BlockChunk (Block {chunks = l, ...}) =>
-          flatten acc (List.revAppend (l,chunks));
+  fun beginBlock b = mlibStream.singleton (BeginBlock b);
+
+  val endBlock = mlibStream.singleton EndBlock;
 in
-  fun renderChunks indent chunks =
-      {indent = indent,
-       line = String.concat (flatten [] (rev chunks))};
+  fun block b pp = program [beginBlock b, pp, endBlock];
 end;
 
-fun renderChunk indent chunk = renderChunks indent [chunk];
+fun consistentBlock i pps = block (mkConsistentBlock i) (program pps);
 
-fun isEmptyBlock block =
-    let
-      val Block {indent = _, style = _, size, chunks} = block
+fun inconsistentBlock i pps = block (mkInconsistentBlock i) (program pps);
 
-      val empty = List.null chunks
+(* ------------------------------------------------------------------------- *)
+(* Words are unbreakable strings annotated with their effective size.        *)
+(* ------------------------------------------------------------------------- *)
 
-(*BasicDebug
-      val _ = not empty orelse size = 0 orelse
-              raise Bug "mlibPrint.isEmptyBlock: bad size"
-*)
-    in
-      empty
-    end;
+fun ppWord w = mlibStream.singleton (AddWord w);
 
-(*BasicDebug
-fun checkBlock ind block =
-    let
-      val Block {indent, style = _, size, chunks} = block
-      val _ = indent >= ind orelse raise Bug "mlibPrint.checkBlock: bad indents"
-      val size' = checkChunks indent chunks
-      val _ = size = size' orelse raise Bug "mlibPrint.checkBlock: wrong size"
-    in
-      size
-    end
+val space = ppWord (mkWord " ");
 
-and checkChunks ind chunks =
-    case chunks of
-      [] => 0
-    | chunk :: chunks => checkChunk ind chunk + checkChunks ind chunks
+fun spaces i = ppWord (spacesWord i);
 
-and checkChunk ind chunk =
-    case chunk of
-      StringChunk {size,...} => size
-    | BreakChunk spaces => spaces
-    | BlockChunk block => checkBlock ind block;
+(* ------------------------------------------------------------------------- *)
+(* Possible line breaks.                                                     *)
+(* ------------------------------------------------------------------------- *)
 
-val checkBlocks =
-    let
-      fun check ind blocks =
-          case blocks of
-            [] => 0
-          | block :: blocks =>
-            let
-              val Block {indent,...} = block
-            in
-              checkBlock ind block + check indent blocks
-            end
-    in
-      check initialIndent o rev
-    end;
-*)
+fun ppBreak b = mlibStream.singleton (AddBreak b);
 
-val initialBlock =
-    let
-      val indent = initialIndent
-      val style = liftStyle initialStyle
-      val size = 0
-      val chunks = []
-    in
-      Block
-        {indent = indent,
-         style = style,
-         size = size,
-         chunks = chunks}
-    end;
+fun breaks i = ppBreak (mkBreak i);
 
-val initialState =
-    let
-      val blocks = [initialBlock]
-      val lineIndent = initialIndent
-      val lineSize = 0
-    in
-      State
-        {blocks = blocks,
-         lineIndent = lineIndent,
-         lineSize = lineSize}
-    end;
+val break = breaks 1;
 
-(*BasicDebug
-fun checkState state =
-    (let
-       val State {blocks, lineIndent = _, lineSize} = state
-       val lineSize' = checkBlocks blocks
-       val _ = lineSize = lineSize' orelse
-               raise Error "wrong lineSize"
-     in
-       ()
-     end
-     handle Error err => raise Bug err)
-    handle Bug bug => raise Bug ("mlibPrint.checkState: " ^ bug);
-*)
+(* ------------------------------------------------------------------------- *)
+(* Forced line breaks.                                                       *)
+(* ------------------------------------------------------------------------- *)
 
-fun isFinalState state =
-    let
-      val State {blocks,lineIndent,lineSize} = state
-    in
-      case blocks of
-        [] => raise Bug "mlibPrint.isFinalState: no block"
-      | [block] => isEmptyBlock block
-      | _ :: _ :: _ => false
-    end;
+val newline = mlibStream.singleton AddNewline;
 
-local
-  fun renderBreak lineIndent (chunks,lines) =
-      let
-        val line = renderChunks lineIndent chunks
-
-        val lines = line :: lines
-      in
-        lines
-      end;
-
-  fun renderBreaks lineIndent lineIndent' breaks lines =
-      case rev breaks of
-        [] => raise Bug "mlibPrint.renderBreaks"
-      | c :: cs =>
-        let
-          val lines = renderBreak lineIndent (c,lines)
-        in
-          List.foldl (renderBreak lineIndent') lines cs
-        end;
-
-  fun splitAllChunks cumulatingChunks =
-      let
-        fun split chunks =
-            case splitChunks chunks of
-              SOME (prefix,chunks) => prefix :: split chunks
-            | NONE => [List.concat (chunks :: cumulatingChunks)]
-      in
-        split
-      end;
-
-  fun mkBreak style cumulatingChunks chunks =
-      case splitChunks chunks of
-        NONE => NONE
-      | SOME (chunks,broken) =>
-        let
-          val breaks =
-              case style of
-                InconsistentBlock =>
-                [List.concat (broken :: cumulatingChunks)]
-              | _ => splitAllChunks cumulatingChunks broken
-        in
-          SOME (breaks,chunks)
-        end;
-
-  fun naturalBreak blocks =
-      case blocks of
-        [] => Right ([],[])
-      | block :: blocks =>
-        case naturalBreak blocks of
-          Left (breaks,blocks,lineIndent,lineSize) =>
-          let
-            val Block {size,...} = block
-
-            val blocks = block :: blocks
-
-            val lineSize = lineSize + size
-          in
-            Left (breaks,blocks,lineIndent,lineSize)
-          end
-        | Right (cumulatingChunks,blocks) =>
-          let
-            val Block {indent,style,size,chunks} = block
-
-            val style = breakStyle style
-          in
-            case mkBreak style cumulatingChunks chunks of
-              SOME (breaks,chunks) =>
-              let
-                val size = sizeChunks chunks
-
-                val block =
-                    Block
-                      {indent = indent,
-                       style = style,
-                       size = size,
-                       chunks = chunks}
-
-                val blocks = block :: blocks
-
-                val lineIndent = indent
-
-                val lineSize = size
-              in
-                Left (breaks,blocks,lineIndent,lineSize)
-              end
-            | NONE =>
-              let
-                val cumulatingChunks = chunks :: cumulatingChunks
-
-                val size = 0
-
-                val chunks = []
-
-                val block =
-                    Block
-                      {indent = indent,
-                       style = style,
-                       size = size,
-                       chunks = chunks}
-
-                val blocks = block :: blocks
-              in
-                Right (cumulatingChunks,blocks)
-              end
-          end;
-
-  fun forceBreakBlock cumulatingChunks block =
-      let
-        val Block {indent, style, size = _, chunks} = block
-
-        val style = breakStyle style
-
-        val break =
-            case mkBreak style cumulatingChunks chunks of
-              SOME (breaks,chunks) =>
-              let
-                val lineSize = sizeChunks chunks
-                val lineIndent = indent
-              in
-                SOME (breaks,chunks,lineIndent,lineSize)
-              end
-            | NONE => forceBreakChunks cumulatingChunks chunks
-      in
-        case break of
-          SOME (breaks,chunks,lineIndent,lineSize) =>
-          let
-            val size = lineSize
-
-            val block =
-                Block
-                  {indent = indent,
-                   style = style,
-                   size = size,
-                   chunks = chunks}
-          in
-            SOME (breaks,block,lineIndent,lineSize)
-          end
-        | NONE => NONE
-      end
-
-  and forceBreakChunks cumulatingChunks chunks =
-      case chunks of
-        [] => NONE
-      | chunk :: chunks =>
-        case forceBreakChunk (chunks :: cumulatingChunks) chunk of
-          SOME (breaks,chunk,lineIndent,lineSize) =>
-          let
-            val chunks = [chunk]
-          in
-            SOME (breaks,chunks,lineIndent,lineSize)
-          end
-        | NONE =>
-          case forceBreakChunks cumulatingChunks chunks of
-            SOME (breaks,chunks,lineIndent,lineSize) =>
-            let
-              val chunks = chunk :: chunks
-
-              val lineSize = lineSize + sizeChunk chunk
-            in
-              SOME (breaks,chunks,lineIndent,lineSize)
-            end
-          | NONE => NONE
-
-  and forceBreakChunk cumulatingChunks chunk =
-      case chunk of
-        StringChunk _ => NONE
-      | BreakChunk _ => raise Bug "mlibPrint.forceBreakChunk: BreakChunk"
-      | BlockChunk block =>
-        case forceBreakBlock cumulatingChunks block of
-          SOME (breaks,block,lineIndent,lineSize) =>
-          let
-            val chunk = BlockChunk block
-          in
-            SOME (breaks,chunk,lineIndent,lineSize)
-          end
-        | NONE => NONE;
-
-  fun forceBreak cumulatingChunks blocks' blocks =
-      case blocks of
-        [] => NONE
-      | block :: blocks =>
-        let
-          val cumulatingChunks =
-              case cumulatingChunks of
-                [] => raise Bug "mlibPrint.forceBreak: null cumulatingChunks"
-              | _ :: cumulatingChunks => cumulatingChunks
-
-          val blocks' =
-              case blocks' of
-                [] => raise Bug "mlibPrint.forceBreak: null blocks'"
-              | _ :: blocks' => blocks'
-        in
-          case forceBreakBlock cumulatingChunks block of
-            SOME (breaks,block,lineIndent,lineSize) =>
-            let
-              val blocks = block :: blocks'
-            in
-              SOME (breaks,blocks,lineIndent,lineSize)
-            end
-          | NONE =>
-            case forceBreak cumulatingChunks blocks' blocks of
-              SOME (breaks,blocks,lineIndent,lineSize) =>
-              let
-                val blocks = block :: blocks
-
-                val Block {size,...} = block
-
-                val lineSize = lineSize + size
-              in
-                SOME (breaks,blocks,lineIndent,lineSize)
-              end
-            | NONE => NONE
-        end;
-
-  fun normalize lineLength lines state =
-      let
-        val State {blocks,lineIndent,lineSize} = state
-      in
-        if lineIndent + lineSize <= lineLength then (lines,state)
-        else
-          let
-            val break =
-                case naturalBreak blocks of
-                  Left break => SOME break
-                | Right (c,b) => forceBreak c b blocks
-          in
-            case break of
-              SOME (breaks,blocks,lineIndent',lineSize) =>
-              let
-                val lines = renderBreaks lineIndent lineIndent' breaks lines
-
-                val state =
-                    State
-                      {blocks = blocks,
-                       lineIndent = lineIndent',
-                       lineSize = lineSize}
-              in
-                normalize lineLength lines state
-              end
-            | NONE => (lines,state)
-          end
-      end;
-
-(*BasicDebug
-  val normalize = fn lineLength => fn lines => fn state =>
-      let
-        val () = checkState state
-      in
-        normalize lineLength lines state
-      end
-      handle Bug bug =>
-        raise Bug ("mlibPrint.normalize: before normalize:\n" ^ bug)
-*)
-
-  fun executeBeginBlock (style,ind) lines state =
-      let
-        val State {blocks,lineIndent,lineSize} = state
-
-        val Block {indent,...} =
-            case blocks of
-              [] => raise Bug "mlibPrint.executeBeginBlock: no block"
-            | block :: _ => block
-
-        val indent = indent + ind
-
-        val style = liftStyle style
-
-        val size = 0
-
-        val chunks = []
-
-        val block =
-            Block
-              {indent = indent,
-               style = style,
-               size = size,
-               chunks = chunks}
-
-        val blocks = block :: blocks
-
-        val state =
-            State
-              {blocks = blocks,
-               lineIndent = lineIndent,
-               lineSize = lineSize}
-      in
-        (lines,state)
-      end;
-
-  fun executeEndBlock lines state =
-      let
-        val State {blocks,lineIndent,lineSize} = state
-
-        val (lineSize,blocks) =
-            case blocks of
-              [] => raise Bug "mlibPrint.executeEndBlock: no block"
-            | topBlock :: blocks =>
-              let
-                val Block
-                      {indent = topIndent,
-                       style = topStyle,
-                       size = topSize,
-                       chunks = topChunks} = topBlock
-              in
-                case topChunks of
-                  [] => (lineSize,blocks)
-                | headTopChunks :: tailTopChunks =>
-                  let
-                    val (lineSize,topSize,topChunks) =
-                        case headTopChunks of
-                          BreakChunk spaces =>
-                          let
-                            val lineSize = lineSize - spaces
-                            and topSize = topSize - spaces
-                            and topChunks = tailTopChunks
-                          in
-                            (lineSize,topSize,topChunks)
-                          end
-                        | _ => (lineSize,topSize,topChunks)
-
-                    val topBlock =
-                        Block
-                          {indent = topIndent,
-                           style = topStyle,
-                           size = topSize,
-                           chunks = topChunks}
-                  in
-                    case blocks of
-                      [] => raise Error "mlibPrint.executeEndBlock: no block"
-                    | block :: blocks =>
-                      let
-                        val Block {indent,style,size,chunks} = block
-
-                        val size = size + topSize
-
-                        val chunks = BlockChunk topBlock :: chunks
-
-                        val block =
-                            Block
-                              {indent = indent,
-                               style = style,
-                               size = size,
-                               chunks = chunks}
-
-                        val blocks = block :: blocks
-                      in
-                        (lineSize,blocks)
-                      end
-                  end
-              end
-
-        val state =
-            State
-              {blocks = blocks,
-               lineIndent = lineIndent,
-               lineSize = lineSize}
-      in
-        (lines,state)
-      end;
-
-  fun executeAddString lineLength (s,n) lines state =
-      let
-        val State {blocks,lineIndent,lineSize} = state
-
-        val blocks =
-            case blocks of
-              [] => raise Bug "mlibPrint.executeAddString: no block"
-            | Block {indent,style,size,chunks} :: blocks =>
-              let
-                val size = size + n
-
-                val chunk = StringChunk {size = n, string = s}
-
-                val chunks = chunk :: chunks
-
-                val block =
-                    Block
-                      {indent = indent,
-                       style = style,
-                       size = size,
-                       chunks = chunks}
-
-                val blocks = block :: blocks
-              in
-                blocks
-              end
-
-        val lineSize = lineSize + n
-
-        val state =
-            State
-              {blocks = blocks,
-               lineIndent = lineIndent,
-               lineSize = lineSize}
-      in
-        normalize lineLength lines state
-      end;
-
-  fun executeAddBreak lineLength spaces lines state =
-      let
-        val State {blocks,lineIndent,lineSize} = state
-
-        val (blocks,lineSize) =
-            case blocks of
-              [] => raise Bug "mlibPrint.executeAddBreak: no block"
-            | Block {indent,style,size,chunks} :: blocks' =>
-              case chunks of
-                [] => (blocks,lineSize)
-              | chunk :: chunks' =>
-                let
-                  val spaces =
-                      case style of
-                        BreakingBlock => lineLength + 1
-                      | _ => spaces
-
-                  val size = size + spaces
-
-                  val chunks =
-                      case chunk of
-                        BreakChunk k => BreakChunk (k + spaces) :: chunks'
-                      | _ => BreakChunk spaces :: chunks
-
-                  val block =
-                      Block
-                        {indent = indent,
-                         style = style,
-                         size = size,
-                         chunks = chunks}
-
-                  val blocks = block :: blocks'
-
-                  val lineSize = lineSize + spaces
-                in
-                  (blocks,lineSize)
-                end
-
-        val state =
-            State
-              {blocks = blocks,
-               lineIndent = lineIndent,
-               lineSize = lineSize}
-      in
-        normalize lineLength lines state
-      end;
-
-  fun executeBigBreak lineLength lines state =
-      executeAddBreak lineLength (lineLength + 1) lines state;
-
-  fun executeAddNewline lineLength lines state =
-      let
-        val (lines,state) =
-            executeAddString lineLength emptyStringSize lines state
-
-        val (lines,state) =
-            executeBigBreak lineLength lines state
-      in
-        executeAddString lineLength emptyStringSize lines state
-      end;
-
-  fun final lineLength lines state =
-      let
-        val lines =
-            if isFinalState state then lines
-            else
-              let
-                val (lines,state) = executeBigBreak lineLength lines state
-
-(*BasicDebug
-                val _ = isFinalState state orelse raise Bug "mlibPrint.final"
-*)
-              in
-                lines
-              end
-      in
-        if List.null lines then mlibStream.Nil else mlibStream.singleton lines
-      end;
-in
-  fun execute {lineLength} =
-      let
-        fun advance step state =
-            let
-              val lines = []
-            in
-              case step of
-                BeginBlock style_ind => executeBeginBlock style_ind lines state
-              | EndBlock => executeEndBlock lines state
-              | AddString s => executeAddString lineLength s lines state
-              | AddBreak spaces => executeAddBreak lineLength spaces lines state
-              | AddNewline => executeAddNewline lineLength lines state
-            end
-
-(*BasicDebug
-        val advance = fn step => fn state =>
-            let
-              val (lines,state) = advance step state
-              val () = checkState state
-            in
-              (lines,state)
-            end
-            handle Bug bug =>
-              raise Bug ("mlibPrint.advance: after " ^ stepToString step ^
-                         " command:\n" ^ bug)
-*)
-      in
-        revConcat o mlibStream.maps advance (final lineLength []) initialState
-      end;
-end;
+fun newlines i = duplicate i newline;
 
 (* ------------------------------------------------------------------------- *)
 (* Pretty-printer combinators.                                               *)
 (* ------------------------------------------------------------------------- *)
 
-type 'a pp = 'a -> ppstream;
-
 fun ppMap f ppB a : ppstream = ppB (f a);
 
 fun ppBracket' l r ppA a =
     let
-      val (_,n) = l
+      val n = sizeWord l
     in
-      blockProgram Inconsistent n
-        [addString l,
+      inconsistentBlock n
+        [ppWord l,
          ppA a,
-         addString r]
+         ppWord r]
     end;
 
-fun ppOp' s = sequence (addString s) (addBreak 1);
+fun ppOp' w = sequence (ppWord w) break;
 
 fun ppOp2' ab ppA ppB (a,b) =
-    blockProgram Inconsistent 0
+    inconsistentBlock 0
       [ppA a,
        ppOp' ab,
        ppB b];
 
 fun ppOp3' ab bc ppA ppB ppC (a,b,c) =
-    blockProgram Inconsistent 0
+    inconsistentBlock 0
       [ppA a,
        ppOp' ab,
        ppB b,
@@ -4959,7 +4413,7 @@ fun ppOpList' s ppA =
       fun ppOpA a = sequence (ppOp' s) (ppA a)
     in
       fn [] => skip
-       | h :: t => blockProgram Inconsistent 0 (ppA h :: List.map ppOpA t)
+       | h :: t => inconsistentBlock 0 (ppA h :: List.map ppOpA t)
     end;
 
 fun ppOpStream' s ppA =
@@ -4968,30 +4422,30 @@ fun ppOpStream' s ppA =
     in
       fn mlibStream.Nil => skip
        | mlibStream.Cons (h,t) =>
-         blockProgram Inconsistent 0
+         inconsistentBlock 0
            [ppA h,
             mlibStream.concat (mlibStream.map ppOpA (t ()))]
     end;
 
-fun ppBracket l r = ppBracket' (mkStringSize l) (mkStringSize r);
+fun ppBracket l r = ppBracket' (mkWord l) (mkWord r);
 
-fun ppOp s = ppOp' (mkStringSize s);
+fun ppOp s = ppOp' (mkWord s);
 
-fun ppOp2 ab = ppOp2' (mkStringSize ab);
+fun ppOp2 ab = ppOp2' (mkWord ab);
 
-fun ppOp3 ab bc = ppOp3' (mkStringSize ab) (mkStringSize bc);
+fun ppOp3 ab bc = ppOp3' (mkWord ab) (mkWord bc);
 
-fun ppOpList s = ppOpList' (mkStringSize s);
+fun ppOpList s = ppOpList' (mkWord s);
 
-fun ppOpStream s = ppOpStream' (mkStringSize s);
+fun ppOpStream s = ppOpStream' (mkWord s);
 
 (* ------------------------------------------------------------------------- *)
 (* Pretty-printers for common types.                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun ppChar c = addString (str c, 1);
+fun ppChar c = ppWord (charWord c);
 
-fun ppString s = addString (mkStringSize s);
+fun ppString s = ppWord (mkWord s);
 
 fun ppEscapeString escape = ppMap (escapeString escape) ppString;
 
@@ -5048,9 +4502,9 @@ in
 end;
 
 local
-  val left = mkStringSize "["
-  and right = mkStringSize "]"
-  and sep = mkStringSize ",";
+  val left = mkWord "["
+  and right = mkWord "]"
+  and sep = mkWord ",";
 in
   fun ppList ppX xs = ppBracket' left right (ppOpList' sep ppX) xs;
 
@@ -5067,9 +4521,9 @@ in
 end;
 
 local
-  val left = mkStringSize "("
-  and right = mkStringSize ")"
-  and sep = mkStringSize ",";
+  val left = mkWord "("
+  and right = mkWord ")"
+  and sep = mkWord ",";
 in
   fun ppPair ppA ppB =
       ppBracket' left right (ppOp2' sep ppA ppB);
@@ -5078,40 +4532,63 @@ in
       ppBracket' left right (ppOp3' sep sep ppA ppB ppC);
 end;
 
-val ppBreakStyle = ppMap breakStyleToString ppString;
-
-val ppStep = ppMap stepToString ppString;
-
-val ppStringSize =
-    let
-      val left = mkStringSize "\""
-      and right = mkStringSize "\""
-      and escape = {escape = [#"\""]}
-
-      val pp = ppBracket' left right (ppEscapeString escape)
-    in
-      fn (s,n) => if size s = n then pp s else ppPair pp ppInt (s,n)
-    end;
-
-fun ppStep step =
-    blockProgram Inconsistent 2
-      (ppStep step ::
-       (case step of
-          BeginBlock style_indent =>
-            [addBreak 1,
-             ppPair ppBreakStyle ppInt style_indent]
-        | EndBlock => []
-        | AddString s =>
-            [addBreak 1,
-             ppStringSize s]
-        | AddBreak n =>
-            [addBreak 1,
-             ppInt n]
-        | AddNewline => []));
-
-val ppPpstream = ppStream ppStep;
-
 fun ppException e = ppString (exnMessage e);
+
+(* ------------------------------------------------------------------------- *)
+(* A type of pretty-printers.                                                *)
+(* ------------------------------------------------------------------------- *)
+
+local
+  val ppStepType = ppMap toStringStep ppString;
+
+  val ppStyle = ppMap toStringStyle ppString;
+
+  val ppBlockInfo =
+      let
+        val sep = mkWord " "
+      in
+        fn Block {style = s, indent = i} =>
+           program [ppStyle s, ppWord sep, ppInt i]
+      end;
+
+  val ppWordInfo =
+      let
+        val left = mkWord "\""
+        and right = mkWord "\""
+        and escape = {escape = [#"\""]}
+
+        val pp = ppBracket' left right (ppEscapeString escape)
+      in
+        fn Word {word = s, size = n} =>
+           if size s = n then pp s else ppPair pp ppInt (s,n)
+      end;
+
+  val ppBreakInfo =
+      let
+        val sep = mkWord "+"
+      in
+        fn Break {size = n, extraIndent = k} =>
+           if k = 0 then ppInt n else program [ppInt n, ppWord sep, ppInt k]
+      end;
+
+  fun ppStep step =
+      inconsistentBlock 2
+        (ppStepType step ::
+         (case step of
+            BeginBlock b =>
+              [break,
+               ppBlockInfo b]
+          | EndBlock => []
+          | AddWord w =>
+              [break,
+               ppWordInfo w]
+          | AddBreak b =>
+              [break,
+               ppBreakInfo b]
+          | AddNewline => []));
+in
+  val ppPpstream = ppStream ppStep;
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Pretty-printing infix operators.                                          *)
@@ -5219,13 +4696,13 @@ fun ppLayeredInfixes dest ppTok {tokens,assoc} ppLower ppSub =
           end
     in
       fn tm_t_a_b_r as (_,t,_,_,_) =>
-         if isLayer t then block Inconsistent 0 (ppLayer tm_t_a_b_r)
+         if isLayer t then inconsistentBlock 0 [ppLayer tm_t_a_b_r]
          else ppLower tm_t_a_b_r
     end;
 
 local
-  val leftBrack = mkStringSize "("
-  and rightBrack = mkStringSize ")";
+  val leftBrack = mkWord "("
+  and rightBrack = mkWord ")";
 in
   fun ppInfixes ops =
       let
@@ -5259,37 +4736,947 @@ in
 end;
 
 (* ------------------------------------------------------------------------- *)
-(* Executing pretty-printers with a global line length.                      *)
+(* A type of output lines.                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val lineLength = ref initialLineLength;
+type line = {indent : int, line : string};
+
+val emptyLine =
+    let
+      val indent = 0
+      and line = ""
+    in
+      {indent = indent,
+       line = line}
+    end;
+
+fun addEmptyLine lines = emptyLine :: lines;
+
+fun addLine lines indent line = {indent = indent, line = line} :: lines;
+
+(* ------------------------------------------------------------------------- *)
+(* Pretty-printer rendering.                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+datatype chunk =
+    WordChunk of word
+  | BreakChunk of break
+  | FrameChunk of frame
+
+and frame =
+    Frame of
+      {block : block,
+       broken : bool,
+       indent : int,
+       size : int,
+       chunks : chunk list};
+
+datatype state =
+    State of
+      {lineIndent : int,
+       lineSize : int,
+       stack : frame list};
+
+fun blockFrame (Frame {block = x, ...}) = x;
+
+fun brokenFrame (Frame {broken = x, ...}) = x;
+
+fun indentFrame (Frame {indent = x, ...}) = x;
+
+fun sizeFrame (Frame {size = x, ...}) = x;
+
+fun chunksFrame (Frame {chunks = x, ...}) = x;
+
+fun styleFrame frame = styleBlock (blockFrame frame);
+
+fun isConsistentFrame frame = isConsistentBlock (blockFrame frame);
+
+fun breakingFrame frame = isConsistentFrame frame andalso brokenFrame frame;
+
+fun sizeChunk chunk =
+    case chunk of
+      WordChunk w => sizeWord w
+    | BreakChunk b => sizeBreak b
+    | FrameChunk f => sizeFrame f;
+
+local
+  fun add (c,acc) = sizeChunk c + acc;
+in
+  fun sizeChunks cs = List.foldl add 0 cs;
+end;
+
+local
+  fun flattenChunks acc chunks =
+      case chunks of
+        [] => acc
+      | chunk :: chunks => flattenChunk acc chunk chunks
+
+  and flattenChunk acc chunk chunks =
+      case chunk of
+        WordChunk w => flattenChunks (renderWord w :: acc) chunks
+      | BreakChunk b => flattenChunks (renderBreak b :: acc) chunks
+      | FrameChunk f => flattenFrame acc f chunks
+
+  and flattenFrame acc frame chunks =
+      flattenChunks acc (chunksFrame frame @ chunks);
+in
+  fun renderChunks chunks = String.concat (flattenChunks [] chunks);
+end;
+
+fun addChunksLine lines indent chunks =
+    addLine lines indent (renderChunks chunks);
+
+local
+  fun add baseIndent ((extraIndent,chunks),lines) =
+      addChunksLine lines (baseIndent + extraIndent) chunks;
+in
+  fun addIndentChunksLines lines baseIndent indent_chunks =
+      List.foldl (add baseIndent) lines indent_chunks;
+end;
+
+fun isEmptyFrame frame =
+    let
+      val chunks = chunksFrame frame
+
+      val empty = List.null chunks
+
+(*BasicDebug
+      val () =
+          if not empty orelse sizeFrame frame = 0 then ()
+          else raise Bug "mlibPrint.isEmptyFrame: bad size"
+*)
+    in
+      empty
+    end;
+
+local
+  fun breakInconsistent blockIndent =
+      let
+        fun break chunks =
+            case chunks of
+              [] => NONE
+            | chunk :: chunks =>
+              case chunk of
+                BreakChunk b =>
+                let
+                  val pre = chunks
+                  and indent = blockIndent + extraIndentBreak b
+                  and post = []
+                in
+                  SOME (pre,indent,post)
+                end
+              | _ =>
+                case break chunks of
+                  SOME (pre,indent,post) =>
+                  let
+                    val post = chunk :: post
+                  in
+                    SOME (pre,indent,post)
+                  end
+                | NONE => NONE
+      in
+        break
+      end;
+
+  fun breakConsistent blockIndent =
+      let
+        fun break indent_chunks chunks =
+            case breakInconsistent blockIndent chunks of
+              NONE => (chunks,indent_chunks)
+            | SOME (pre,indent,post) =>
+              break ((indent,post) :: indent_chunks) pre
+      in
+        break []
+      end;
+in
+  fun breakFrame frame =
+      let
+        val Frame
+              {block,
+               broken = _,
+               indent = _,
+               size = _,
+               chunks} = frame
+
+        val blockIndent = indentBlock block
+      in
+        case breakInconsistent blockIndent chunks of
+          NONE => NONE
+        | SOME (pre,indent,post) =>
+          let
+            val broken = true
+            and size = sizeChunks post
+
+            val frame =
+                Frame
+                  {block = block,
+                   broken = broken,
+                   indent = indent,
+                   size = size,
+                   chunks = post}
+          in
+            case styleBlock block of
+              Inconsistent =>
+              let
+                val indent_chunks = []
+              in
+                SOME (pre,indent_chunks,frame)
+              end
+            | Consistent =>
+              let
+                val (pre,indent_chunks) = breakConsistent blockIndent pre
+              in
+                SOME (pre,indent_chunks,frame)
+              end
+          end
+      end;
+end;
+
+fun removeChunksFrame frame =
+    let
+      val Frame
+            {block,
+             broken,
+             indent,
+             size = _,
+             chunks} = frame
+    in
+      if broken andalso List.null chunks then NONE
+      else
+        let
+          val frame =
+              Frame
+                {block = block,
+                 broken = true,
+                 indent = indent,
+                 size = 0,
+                 chunks = []}
+        in
+          SOME (chunks,frame)
+        end
+    end;
+
+val removeChunksFrames =
+    let
+      fun remove frames =
+          case frames of
+            [] =>
+            let
+              val chunks = []
+              and frames = NONE
+              and indent = 0
+            in
+              (chunks,frames,indent)
+            end
+          | top :: rest =>
+            let
+              val (chunks,rest',indent) = remove rest
+
+              val indent = indent + indentFrame top
+
+              val (chunks,top') =
+                  case removeChunksFrame top of
+                    NONE => (chunks,NONE)
+                  | SOME (topChunks,top) => (topChunks @ chunks, SOME top)
+
+              val frames' =
+                  case (top',rest') of
+                    (NONE,NONE) => NONE
+                  | (SOME top, NONE) => SOME (top :: rest)
+                  | (NONE, SOME rest) => SOME (top :: rest)
+                  | (SOME top, SOME rest) => SOME (top :: rest)
+            in
+              (chunks,frames',indent)
+            end
+    in
+      fn frames =>
+         let
+           val (chunks,frames',indent) = remove frames
+
+           val frames = Option.getOpt (frames',frames)
+         in
+           (chunks,frames,indent)
+         end
+    end;
+
+local
+  fun breakUp lines lineIndent frames =
+      case frames of
+        [] => NONE
+      | frame :: frames =>
+        case breakUp lines lineIndent frames of
+          SOME (lines_indent,lineSize,frames) =>
+          let
+            val lineSize = lineSize + sizeFrame frame
+            and frames = frame :: frames
+          in
+            SOME (lines_indent,lineSize,frames)
+          end
+        | NONE =>
+          case breakFrame frame of
+            NONE => NONE
+          | SOME (frameChunks,indent_chunks,frame) =>
+            let
+              val (chunks,frames,indent) = removeChunksFrames frames
+
+              val chunks = frameChunks @ chunks
+
+              val lines = addChunksLine lines lineIndent chunks
+
+              val lines = addIndentChunksLines lines indent indent_chunks
+
+              val lineIndent = indent + indentFrame frame
+
+              val lineSize = sizeFrame frame
+
+              val frames = frame :: frames
+            in
+              SOME ((lines,lineIndent),lineSize,frames)
+            end;
+
+  fun breakInsideChunk chunk =
+      case chunk of
+        WordChunk _ => NONE
+      | BreakChunk _ => raise Bug "mlibPrint.breakInsideChunk"
+      | FrameChunk frame =>
+        case breakFrame frame of
+          SOME (pathChunks,indent_chunks,frame) =>
+          let
+            val pathIndent = 0
+            and breakIndent = indentFrame frame
+          in
+            SOME (pathChunks,pathIndent,indent_chunks,breakIndent,frame)
+          end
+        | NONE => breakInsideFrame frame
+
+  and breakInsideChunks chunks =
+      case chunks of
+        [] => NONE
+      | chunk :: chunks =>
+        case breakInsideChunk chunk of
+          SOME (pathChunks,pathIndent,indent_chunks,breakIndent,frame) =>
+          let
+            val pathChunks = pathChunks @ chunks
+            and chunks = [FrameChunk frame]
+          in
+            SOME (pathChunks,pathIndent,indent_chunks,breakIndent,chunks)
+          end
+        | NONE =>
+          case breakInsideChunks chunks of
+            SOME (pathChunks,pathIndent,indent_chunks,breakIndent,chunks) =>
+            let
+              val chunks = chunk :: chunks
+            in
+              SOME (pathChunks,pathIndent,indent_chunks,breakIndent,chunks)
+            end
+          | NONE => NONE
+
+  and breakInsideFrame frame =
+      let
+        val Frame
+              {block,
+               broken = _,
+               indent,
+               size = _,
+               chunks} = frame
+      in
+        case breakInsideChunks chunks of
+          SOME (pathChunks,pathIndent,indent_chunks,breakIndent,chunks) =>
+          let
+            val pathIndent = pathIndent + indent
+            and broken = true
+            and size = sizeChunks chunks
+
+            val frame =
+                Frame
+                  {block = block,
+                   broken = broken,
+                   indent = indent,
+                   size = size,
+                   chunks = chunks}
+          in
+            SOME (pathChunks,pathIndent,indent_chunks,breakIndent,frame)
+          end
+        | NONE => NONE
+      end;
+
+  fun breakInside lines lineIndent frames =
+      case frames of
+        [] => NONE
+      | frame :: frames =>
+        case breakInsideFrame frame of
+          SOME (pathChunks,pathIndent,indent_chunks,breakIndent,frame) =>
+          let
+            val (chunks,frames,indent) = removeChunksFrames frames
+
+            val chunks = pathChunks @ chunks
+            and indent = indent + pathIndent
+
+            val lines = addChunksLine lines lineIndent chunks
+
+            val lines = addIndentChunksLines lines indent indent_chunks
+
+            val lineIndent = indent + breakIndent
+
+            val lineSize = sizeFrame frame
+
+            val frames = frame :: frames
+          in
+            SOME ((lines,lineIndent),lineSize,frames)
+          end
+        | NONE =>
+          case breakInside lines lineIndent frames of
+            SOME (lines_indent,lineSize,frames) =>
+            let
+              val lineSize = lineSize + sizeFrame frame
+              and frames = frame :: frames
+            in
+              SOME (lines_indent,lineSize,frames)
+            end
+          | NONE => NONE;
+in
+  fun breakFrames lines lineIndent frames =
+      case breakUp lines lineIndent frames of
+        SOME ((lines,lineIndent),lineSize,frames) =>
+        SOME (lines,lineIndent,lineSize,frames)
+      | NONE =>
+        case breakInside lines lineIndent frames of
+          SOME ((lines,lineIndent),lineSize,frames) =>
+          SOME (lines,lineIndent,lineSize,frames)
+        | NONE => NONE;
+end;
+
+(*BasicDebug
+fun checkChunk chunk =
+    case chunk of
+      WordChunk t => (false, sizeWord t)
+    | BreakChunk b => (false, sizeBreak b)
+    | FrameChunk b => checkFrame b
+
+and checkChunks chunks =
+    case chunks of
+      [] => (false,0)
+    | chunk :: chunks =>
+      let
+        val (bk,sz) = checkChunk chunk
+
+        val (bk',sz') = checkChunks chunks
+      in
+        (bk orelse bk', sz + sz')
+      end
+
+and checkFrame frame =
+    let
+      val Frame
+            {block = _,
+             broken,
+             indent = _,
+             size,
+             chunks} = frame
+
+      val (bk,sz) = checkChunks chunks
+
+      val () =
+          if size = sz then ()
+          else raise Bug "mlibPrint.checkFrame: wrong size"
+
+      val () =
+          if broken orelse not bk then ()
+          else raise Bug "mlibPrint.checkFrame: deep broken frame"
+    in
+      (broken,size)
+    end;
+
+fun checkFrames frames =
+    case frames of
+      [] => (true,0)
+    | frame :: frames =>
+      let
+        val (bk,sz) = checkFrame frame
+
+        val (bk',sz') = checkFrames frames
+
+        val () =
+            if bk' orelse not bk then ()
+            else raise Bug "mlibPrint.checkFrame: broken stack frame"
+      in
+        (bk, sz + sz')
+      end;
+*)
+
+(*BasicDebug
+fun checkState state =
+    (let
+       val State {lineIndent,lineSize,stack} = state
+
+       val () =
+           if not (List.null stack) then ()
+           else raise Error "no stack"
+
+       val (_,sz) = checkFrames stack
+
+       val () =
+           if lineSize = sz then ()
+           else raise Error "wrong lineSize"
+     in
+       ()
+     end
+     handle Error err => raise Bug err)
+    handle Bug bug => raise Bug ("mlibPrint.checkState: " ^ bug);
+*)
+
+fun isEmptyState state =
+    let
+      val State {lineSize,stack,...} = state
+    in
+      lineSize = 0 andalso List.all isEmptyFrame stack
+    end;
+
+fun isFinalState state =
+    let
+      val State {stack,...} = state
+    in
+      case stack of
+        [] => raise Bug "mlibPrint.isFinalState: empty stack"
+      | [frame] => isEmptyFrame frame
+      | _ :: _ :: _ => false
+    end;
+
+local
+  val initialBlock =
+      let
+        val indent = 0
+        and style = Inconsistent
+      in
+        Block
+          {indent = indent,
+           style = style}
+      end;
+
+  val initialFrame =
+      let
+        val block = initialBlock
+        and broken = false
+        and indent = 0
+        and size = 0
+        and chunks = []
+      in
+        Frame
+          {block = block,
+           broken = broken,
+           indent = indent,
+           size = size,
+           chunks = chunks}
+      end;
+in
+  val initialState =
+      let
+        val lineIndent = 0
+        and lineSize = 0
+        and stack = [initialFrame]
+      in
+        State
+          {lineIndent = lineIndent,
+           lineSize = lineSize,
+           stack = stack}
+      end;
+end;
+
+fun normalizeState lineLength lines state =
+    let
+      val State {lineIndent,lineSize,stack} = state
+
+      val within =
+          case lineLength of
+            NONE => true
+          | SOME len => lineIndent + lineSize <= len
+    in
+      if within then (lines,state)
+      else
+        case breakFrames lines lineIndent stack of
+          NONE => (lines,state)
+        | SOME (lines,lineIndent,lineSize,stack) =>
+          let
+(*BasicDebug
+            val () = checkState state
+*)
+            val state =
+                State
+                  {lineIndent = lineIndent,
+                   lineSize = lineSize,
+                   stack = stack}
+          in
+            normalizeState lineLength lines state
+          end
+    end
+(*BasicDebug
+    handle Bug bug => raise Bug ("mlibPrint.normalizeState:\n" ^ bug)
+*)
+
+local
+  fun executeBeginBlock block lines state =
+      let
+        val State {lineIndent,lineSize,stack} = state
+
+        val broken = false
+        and indent = indentBlock block
+        and size = 0
+        and chunks = []
+
+        val frame =
+            Frame
+              {block = block,
+               broken = broken,
+               indent = indent,
+               size = size,
+               chunks = chunks}
+
+        val stack = frame :: stack
+
+        val state =
+            State
+              {lineIndent = lineIndent,
+               lineSize = lineSize,
+               stack = stack}
+      in
+        (lines,state)
+      end;
+
+  fun executeEndBlock lines state =
+      let
+        val State {lineIndent,lineSize,stack} = state
+
+        val (lineSize,stack) =
+            case stack of
+              [] => raise Bug "mlibPrint.executeEndBlock: empty stack"
+            | topFrame :: stack =>
+              let
+                val Frame
+                      {block = topBlock,
+                       broken = topBroken,
+                       indent = topIndent,
+                       size = topSize,
+                       chunks = topChunks} = topFrame
+
+                val (lineSize,topSize,topChunks,topFrame) =
+                    case topChunks of
+                      BreakChunk break :: chunks =>
+                      let
+(*BasicDebug
+                        val () =
+                            let
+                              val mesg =
+                                  "ignoring a break at the end of a " ^
+                                  "pretty-printing block"
+                            in
+                              warn mesg
+                            end
+*)
+                        val n = sizeBreak break
+
+                        val lineSize = lineSize - n
+                        and topSize = topSize - n
+                        and topChunks = chunks
+
+                        val topFrame =
+                            Frame
+                              {block = topBlock,
+                               broken = topBroken,
+                               indent = topIndent,
+                               size = topSize,
+                               chunks = topChunks}
+                      in
+                        (lineSize,topSize,topChunks,topFrame)
+                      end
+                    | _ => (lineSize,topSize,topChunks,topFrame)
+              in
+                if List.null topChunks then (lineSize,stack)
+                else
+                  case stack of
+                    [] => raise Error "mlibPrint.execute: too many end blocks"
+                  | frame :: stack =>
+                    let
+                      val Frame
+                            {block,
+                             broken,
+                             indent,
+                             size,
+                             chunks} = frame
+
+                      val size = size + topSize
+
+                      val chunk = FrameChunk topFrame
+
+                      val chunks = chunk :: chunks
+
+                      val frame =
+                          Frame
+                            {block = block,
+                             broken = broken,
+                             indent = indent,
+                             size = size,
+                             chunks = chunks}
+
+                      val stack = frame :: stack
+                    in
+                      (lineSize,stack)
+                    end
+              end
+
+        val state =
+            State
+              {lineIndent = lineIndent,
+               lineSize = lineSize,
+               stack = stack}
+      in
+        (lines,state)
+      end;
+
+  fun executeAddWord lineLength word lines state =
+      let
+        val State {lineIndent,lineSize,stack} = state
+
+        val n = sizeWord word
+
+        val lineSize = lineSize + n
+
+        val stack =
+            case stack of
+              [] => raise Bug "mlibPrint.executeAddWord: empty stack"
+            | frame :: stack =>
+              let
+                val Frame
+                      {block,
+                       broken,
+                       indent,
+                       size,
+                       chunks} = frame
+
+                val size = size + n
+
+                val chunk = WordChunk word
+
+                val chunks = chunk :: chunks
+
+                val frame =
+                    Frame
+                      {block = block,
+                       broken = broken,
+                       indent = indent,
+                       size = size,
+                       chunks = chunks}
+
+                val stack = frame :: stack
+              in
+                stack
+              end
+
+        val state =
+            State
+              {lineIndent = lineIndent,
+               lineSize = lineSize,
+               stack = stack}
+      in
+        normalizeState lineLength lines state
+      end;
+
+  fun executeAddBreak lineLength break lines state =
+      let
+        val State {lineIndent,lineSize,stack} = state
+
+        val (topFrame,restFrames) =
+            case stack of
+              [] => raise Bug "mlibPrint.executeAddBreak: empty stack"
+            | topFrame :: restFrames => (topFrame,restFrames)
+
+        val Frame
+              {block = topBlock,
+               broken = topBroken,
+               indent = topIndent,
+               size = topSize,
+               chunks = topChunks} = topFrame
+      in
+        case topChunks of
+          [] => (lines,state)
+        | topChunk :: restTopChunks =>
+          let
+            val (topChunks,n) =
+                case topChunk of
+                  BreakChunk break' =>
+                  let
+                    val break = appendBreak break' break
+
+                    val chunk = BreakChunk break
+
+                    val topChunks = chunk :: restTopChunks
+                    and n = sizeBreak break - sizeBreak break'
+                  in
+                    (topChunks,n)
+                  end
+                | _ =>
+                  let
+                    val chunk = BreakChunk break
+
+                    val topChunks = chunk :: topChunks
+                    and n = sizeBreak break
+                  in
+                    (topChunks,n)
+                  end
+
+            val lineSize = lineSize + n
+
+            val topSize = topSize + n
+
+            val topFrame =
+                Frame
+                  {block = topBlock,
+                   broken = topBroken,
+                   indent = topIndent,
+                   size = topSize,
+                   chunks = topChunks}
+
+            val stack = topFrame :: restFrames
+
+            val state =
+                State
+                  {lineIndent = lineIndent,
+                   lineSize = lineSize,
+                   stack = stack}
+
+            val lineLength =
+                if breakingFrame topFrame then SOME ~1 else lineLength
+          in
+            normalizeState lineLength lines state
+          end
+      end;
+
+  fun executeBigBreak lines state =
+      let
+        val lineLength = SOME ~1
+        and break = mkBreak 0
+      in
+        executeAddBreak lineLength break lines state
+      end;
+
+  fun executeAddNewline lineLength lines state =
+      if isEmptyState state then (addEmptyLine lines, state)
+      else executeBigBreak lines state;
+
+  fun executeEof lineLength lines state =
+      if isFinalState state then (lines,state)
+      else
+        let
+          val (lines,state) = executeBigBreak lines state
+
+(*BasicDebug
+          val () =
+              if isFinalState state then ()
+              else raise Bug "mlibPrint.executeEof: not a final state"
+*)
+        in
+          (lines,state)
+        end;
+in
+  fun render {lineLength} =
+      let
+        fun execute step state =
+            let
+              val lines = []
+            in
+              case step of
+                BeginBlock block => executeBeginBlock block lines state
+              | EndBlock => executeEndBlock lines state
+              | AddWord word => executeAddWord lineLength word lines state
+              | AddBreak break => executeAddBreak lineLength break lines state
+              | AddNewline => executeAddNewline lineLength lines state
+            end
+
+(*BasicDebug
+        val execute = fn step => fn state =>
+            let
+              val (lines,state) = execute step state
+
+              val () = checkState state
+            in
+              (lines,state)
+            end
+            handle Bug bug =>
+              raise Bug ("mlibPrint.execute: after " ^ toStringStep step ^
+                         " command:\n" ^ bug)
+*)
+
+        fun final state =
+            let
+              val lines = []
+
+              val (lines,state) = executeEof lineLength lines state
+
+(*BasicDebug
+              val () = checkState state
+*)
+            in
+              if List.null lines then mlibStream.Nil else mlibStream.singleton lines
+            end
+(*BasicDebug
+            handle Bug bug => raise Bug ("mlibPrint.final: " ^ bug)
+*)
+      in
+        fn pps =>
+           let
+             val lines = mlibStream.maps execute final initialState pps
+           in
+             revConcat lines
+           end
+      end;
+end;
 
 local
   fun inc {indent,line} acc = line :: nSpaces indent :: acc;
 
   fun incn (indent_line,acc) = inc indent_line ("\n" :: acc);
 in
-  fun toLines len ppA a =
-      case execute {lineLength = len} (ppA a) of
+  fun toStringWithLineLength len ppA a =
+      case render len (ppA a) of
         mlibStream.Nil => ""
       | mlibStream.Cons (h,t) =>
         let
           val lines = mlibStream.foldl incn (inc h []) (t ())
         in
-          String.concat (rev lines)
+          String.concat (List.rev lines)
         end;
 end;
 
-fun toString ppA a = toLines (!lineLength) ppA a;
+local
+  fun renderLine {indent,line} = nSpaces indent ^ line ^ "\n";
+in
+  fun toStreamWithLineLength len ppA a =
+      mlibStream.map renderLine (render len (ppA a));
+end;
 
-fun toLine ppA a = toLines 100000 ppA a;
+fun toLine ppA a = toStringWithLineLength {lineLength = NONE} ppA a;
+
+(* ------------------------------------------------------------------------- *)
+(* Pretty-printer rendering with a global line length.                       *)
+(* ------------------------------------------------------------------------- *)
+
+val lineLength = ref initialLineLength;
+
+fun toString ppA a =
+    let
+      val len = {lineLength = SOME (!lineLength)}
+    in
+      toStringWithLineLength len ppA a
+    end;
 
 fun toStream ppA a =
-    mlibStream.map (fn {indent,line} => nSpaces indent ^ line ^ "\n")
-      (execute {lineLength = !lineLength} (ppA a));
+    let
+      val len = {lineLength = SOME (!lineLength)}
+    in
+      toStreamWithLineLength len ppA a
+    end;
 
 local
-  val sep = mkStringSize " =";
+  val sep = mkWord " =";
 in
   fun trace ppX nameX x =
       mlibUseful.trace (toString (ppOp2' sep ppString ppX) (nameX,x) ^ "\n");
@@ -5531,7 +5918,7 @@ fun equal (n1,i1) (n2,i2) = i1 = i2 andalso mlibName.equal n1 n2;
 (* ------------------------------------------------------------------------- *)
 
 fun pp (n,i) =
-    mlibPrint.blockProgram mlibPrint.Inconsistent 0
+    mlibPrint.inconsistentBlock 0
       [mlibName.pp n,
        mlibPrint.ppString "/",
        mlibPrint.ppInt i];
@@ -5758,7 +6145,7 @@ fun many parser =
     let
       fun sparser l = parser >> (fn x => x :: l)
     in
-      mmany sparser [] >> rev
+      mmany sparser [] >> List.rev
     end;
 
 fun atLeastOne p = (p ++ many p) >> op::;
@@ -5919,7 +6306,7 @@ fun parseLayeredInfixes {tokens,assoc} mk tokParser subParser =
              | [(t,y)] => mk (t,x,y)
              | _ => raise NoParse)
           | mlibPrint.RightAssoc =>
-            (case rev txs of
+            (case List.rev txs of
                [] => x
              | tx :: txs =>
                let
@@ -6311,7 +6698,7 @@ local
       let
         fun f (n,arg) = (n :: path, arg)
 
-        val acc = (rev path, tm) :: acc
+        val acc = (List.rev path, tm) :: acc
       in
         case tm of
           Var _ => subtms rest acc
@@ -6340,7 +6727,7 @@ fun find pred =
     let
       fun search [] = NONE
         | search ((path,tm) :: rest) =
-          if pred tm then SOME (rev path)
+          if pred tm then SOME (List.rev path)
           else
             case tm of
               Var _ => search rest
@@ -6452,7 +6839,7 @@ local
              Var _ => subtms rest acc
            | Fn _ =>
              let
-               val acc = (rev path, tm) :: acc
+               val acc = (List.rev path, tm) :: acc
                val rest = (0 :: path, t) :: rest
              in
                subtms rest acc
@@ -6463,7 +6850,7 @@ local
 
             val (_,args) = func
 
-            val acc = (rev path, tm) :: acc
+            val acc = (List.rev path, tm) :: acc
 
             val rest = List.map f (enumerate args) @ rest
           in
@@ -6600,7 +6987,7 @@ fun pp inputTerm =
           mlibPrint.program
             [(if tok = "," then mlibPrint.skip else mlibPrint.ppString " "),
              mlibPrint.ppString tok,
-             mlibPrint.addBreak 1];
+             mlibPrint.break];
 
       val iPrinter = mlibPrint.ppInfixes iOps destI iToken
 
@@ -6666,14 +7053,14 @@ fun pp inputTerm =
 
       fun functionArgument bv tm =
           mlibPrint.sequence
-            (mlibPrint.addBreak 1)
+            mlibPrint.break
             (if isBrack tm then customBracket bv tm
              else if isVar tm orelse isConst tm then basic bv tm
              else bracket bv tm)
 
       and basic bv (Var v) = varName bv v
         | basic bv (Fn (f,args)) =
-          mlibPrint.blockProgram mlibPrint.Inconsistent 2
+          mlibPrint.inconsistentBlock 2
             (functionName bv f :: List.map (functionArgument bv) args)
 
       and customBracket bv tm =
@@ -6692,21 +7079,21 @@ fun pp inputTerm =
                 [mlibPrint.ppString q,
                  varName bv v,
                  mlibPrint.program
-                   (List.map (mlibPrint.sequence (mlibPrint.addBreak 1) o varName bv) vs),
+                   (List.map (mlibPrint.sequence mlibPrint.break o varName bv) vs),
                  mlibPrint.ppString ".",
-                 mlibPrint.addBreak 1,
+                 mlibPrint.break,
                  innerQuant bv tm]
             end
 
       and quantifier bv tm =
           if not (isQuant tm) then customBracket bv tm
-          else mlibPrint.block mlibPrint.Inconsistent 2 (innerQuant bv tm)
+          else mlibPrint.inconsistentBlock 2 [innerQuant bv tm]
 
       and molecule bv (tm,r) =
           let
             val (n,tm) = stripNeg tm
           in
-            mlibPrint.blockProgram mlibPrint.Inconsistent n
+            mlibPrint.inconsistentBlock n
               [mlibPrint.duplicate n (mlibPrint.ppString neg),
                if isI tm orelse (r andalso isQuant tm) then bracket bv tm
                else quantifier bv tm]
@@ -9808,11 +10195,11 @@ val stripNeg =
 (* Conjunctions *)
 
 fun listMkConj fms =
-    case rev fms of [] => True | fm :: fms => List.foldl And fm fms;
+    case List.rev fms of [] => True | fm :: fms => List.foldl And fm fms;
 
 local
   fun strip cs (And (p,q)) = strip (p :: cs) q
-    | strip cs fm = rev (fm :: cs);
+    | strip cs fm = List.rev (fm :: cs);
 in
   fun stripConj True = []
     | stripConj fm = strip [] fm;
@@ -9831,11 +10218,11 @@ val flattenConj =
 (* Disjunctions *)
 
 fun listMkDisj fms =
-    case rev fms of [] => False | fm :: fms => List.foldl Or fm fms;
+    case List.rev fms of [] => False | fm :: fms => List.foldl Or fm fms;
 
 local
   fun strip cs (Or (p,q)) = strip (p :: cs) q
-    | strip cs fm = rev (fm :: cs);
+    | strip cs fm = List.rev (fm :: cs);
 in
   fun stripDisj False = []
     | stripDisj fm = strip [] fm;
@@ -9854,11 +10241,11 @@ val flattenDisj =
 (* Equivalences *)
 
 fun listMkEquiv fms =
-    case rev fms of [] => True | fm :: fms => List.foldl Iff fm fms;
+    case List.rev fms of [] => True | fm :: fms => List.foldl Iff fm fms;
 
 local
   fun strip cs (Iff (p,q)) = strip (p :: cs) q
-    | strip cs fm = rev (fm :: cs);
+    | strip cs fm = List.rev (fm :: cs);
 in
   fun stripEquiv True = []
     | stripEquiv fm = strip [] fm;
@@ -9888,7 +10275,7 @@ fun setMkForall (vs,body) = mlibNameSet.foldr Forall body vs;
 
 local
   fun strip vs (Forall (v,b)) = strip (v :: vs) b
-    | strip vs tm = (rev vs, tm);
+    | strip vs tm = (List.rev vs, tm);
 in
   val stripForall = strip [];
 end;
@@ -9907,7 +10294,7 @@ fun setMkExists (vs,body) = mlibNameSet.foldr Exists body vs;
 
 local
   fun strip vs (Exists (v,b)) = strip (v :: vs) b
-    | strip vs tm = (rev vs, tm);
+    | strip vs tm = (List.rev vs, tm);
 in
   val stripExists = strip [];
 end;
@@ -10212,7 +10599,7 @@ val parse = mlibParse.parseQuotation toString fromString;
 
 local
   fun add_asms asms goal =
-      if List.null asms then goal else Imp (listMkConj (rev asms), goal);
+      if List.null asms then goal else Imp (listMkConj (List.rev asms), goal);
 
   fun add_var_asms asms v goal = add_asms asms (Forall (v,goal));
 
@@ -10980,7 +11367,7 @@ local
         (List.map mlibLiteral.toFormula (mlibLiteralSet.toList (clause th)));
 in
   fun pp th =
-      mlibPrint.blockProgram mlibPrint.Inconsistent 3
+      mlibPrint.inconsistentBlock 3
         [mlibPrint.ppString "|- ",
          mlibFormula.pp (toFormula th)];
 end;
