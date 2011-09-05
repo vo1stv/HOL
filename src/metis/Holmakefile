@@ -10,22 +10,22 @@ metisTools.uo: metisTools.sml mlib.ui
 metisTools.ui: metisTools.sig mlib.ui
 	$(HOLMOSMLC) -c mlib.ui $<
 
-matchTools.uo: matchTools.sml mlib.ui
-	$(HOLMOSMLC) -c mlib.ui $<
-
-matchTools.ui: matchTools.sig mlib.ui
-	$(HOLMOSMLC) -c mlib.ui $<
-
 folTools.uo: folTools.sml mlib.ui
 	$(HOLMOSMLC) -c mlib.ui $<
 
 folTools.ui: folTools.sig mlib.ui
 	$(HOLMOSMLC) -c mlib.ui $<
 
-folMapping.uo: folMapping.sml mlib.ui
-	$(HOLMOSMLC) -c mlib.ui $<
+folMapping.uo: folMapping.sml mlib.ui matchTools.ui
+	$(HOLMOSMLC) -c mlib.ui matchTools.ui $<
 
 folMapping.ui: folMapping.sig mlib.ui
+	$(HOLMOSMLC) -c mlib.ui $<
+
+matchTools.uo: matchTools.sml mlib.ui
+	$(HOLMOSMLC) -c mlib.ui $<
+
+matchTools.ui: matchTools.sig mlib.ui
 	$(HOLMOSMLC) -c mlib.ui $<
 
 mlib.uo mlib.ui: mlib.sml
