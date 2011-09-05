@@ -24,7 +24,7 @@ type formula1 = mlibFormula.formula;
 type thm1     = mlibThm.thm;
 type vars     = term list * hol_type list;
 
-val assert     = mlibUseful.assert;
+fun assert b e = if b then () else raise e;
 val pinst      = matchTools.pinst;
 val INST_TY    = matchTools.INST_TY;
 val PINST      = matchTools.PINST;

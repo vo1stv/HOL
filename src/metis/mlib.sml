@@ -72,7 +72,6 @@ exception Bug of string
 val total : ('a -> 'b) -> 'a -> 'b option
 
 val can : ('a -> 'b) -> 'a -> bool
-val assert : bool -> exn -> unit
 
 (* ------------------------------------------------------------------------- *)
 (* Tracing.                                                                  *)
@@ -395,8 +394,6 @@ struct
 (* ------------------------------------------------------------------------- *)
 (* Exceptions.                                                               *)
 (* ------------------------------------------------------------------------- *)
-
-fun assert b e = if b then () else raise e
 
 exception Error of string;
 
