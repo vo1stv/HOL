@@ -26,5 +26,6 @@ cat\
 for s in `egrep "^(signature|structure|functor)" mlib.sml | awk '{ print $2 }' | sort | uniq`
 do
   sed -i "s/\\b$s\\b/mlib$s/g" mlib.sml
+  sed -i "/^signature\\|structure/!s/mlibAtom /Atom /" mlib.sml
 done
 sed -i "s/HOLPortable/Portable/1" mlib.sml

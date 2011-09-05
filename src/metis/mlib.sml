@@ -9866,7 +9866,7 @@ sig
 datatype formula =
     True
   | False
-  | mlibAtom of mlibAtom.atom
+  | Atom of mlibAtom.atom
   | Not of formula
   | And of formula * formula
   | Or of formula * formula
@@ -10065,7 +10065,7 @@ open mlibUseful;
 datatype formula =
     True
   | False
-  | mlibAtom of mlibAtom.atom
+  | Atom of mlibAtom.atom
   | Not of formula
   | And of formula * formula
   | Or of formula * formula
@@ -10105,7 +10105,7 @@ local
   fun funcs fs [] = fs
     | funcs fs (True :: fms) = funcs fs fms
     | funcs fs (False :: fms) = funcs fs fms
-    | funcs fs (mlibAtom atm :: fms) =
+    | funcs fs (Atom atm :: fms) =
       funcs (mlibNameAritySet.union (mlibAtom.functions atm) fs) fms
     | funcs fs (Not p :: fms) = funcs fs (p :: fms)
     | funcs fs (And (p,q) :: fms) = funcs fs (p :: q :: fms)
@@ -10122,7 +10122,7 @@ local
   fun funcs fs [] = fs
     | funcs fs (True :: fms) = funcs fs fms
     | funcs fs (False :: fms) = funcs fs fms
-    | funcs fs (mlibAtom atm :: fms) =
+    | funcs fs (Atom atm :: fms) =
       funcs (mlibNameSet.union (mlibAtom.functionNames atm) fs) fms
     | funcs fs (Not p :: fms) = funcs fs (p :: fms)
     | funcs fs (And (p,q) :: fms) = funcs fs (p :: q :: fms)
@@ -10141,7 +10141,7 @@ local
   fun rels fs [] = fs
     | rels fs (True :: fms) = rels fs fms
     | rels fs (False :: fms) = rels fs fms
-    | rels fs (mlibAtom atm :: fms) =
+    | rels fs (Atom atm :: fms) =
       rels (mlibNameAritySet.add fs (mlibAtom.relation atm)) fms
     | rels fs (Not p :: fms) = rels fs (p :: fms)
     | rels fs (And (p,q) :: fms) = rels fs (p :: q :: fms)
@@ -10158,7 +10158,7 @@ local
   fun rels fs [] = fs
     | rels fs (True :: fms) = rels fs fms
     | rels fs (False :: fms) = rels fs fms
-    | rels fs (mlibAtom atm :: fms) = rels (mlibNameSet.add fs (mlibAtom.name atm)) fms
+    | rels fs (Atom atm :: fms) = rels (mlibNameSet.add fs (mlibAtom.name atm)) fms
     | rels fs (Not p :: fms) = rels fs (p :: fms)
     | rels fs (And (p,q) :: fms) = rels fs (p :: q :: fms)
     | rels fs (Or (p,q) :: fms) = rels fs (p :: q :: fms)
@@ -10172,7 +10172,7 @@ end;
 
 (* Atoms *)
 
-fun destAtom (mlibAtom atm) = atm
+fun destAtom (Atom atm) = atm
   | destAtom _ = raise Error "mlibFormula.destAtom";
 
 val isAtom = can destAtom;
@@ -10307,7 +10307,7 @@ local
   fun sz n [] = n
     | sz n (True :: fms) = sz (n + 1) fms
     | sz n (False :: fms) = sz (n + 1) fms
-    | sz n (mlibAtom atm :: fms) = sz (n + mlibAtom.symbols atm) fms
+    | sz n (Atom atm :: fms) = sz (n + mlibAtom.symbols atm) fms
     | sz n (Not p :: fms) = sz (n + 1) (p :: fms)
     | sz n (And (p,q) :: fms) = sz (n + 1) (p :: q :: fms)
     | sz n (Or (p,q) :: fms) = sz (n + 1) (p :: q :: fms)
@@ -10335,13 +10335,13 @@ local
         | (False,False) => cmp fs
         | (False,_) => LESS
         | (_,False) => GREATER
-        | (mlibAtom atm1, mlibAtom atm2) =>
+        | (Atom atm1, Atom atm2) =>
           (case mlibAtom.compare (atm1,atm2) of
              LESS => LESS
            | EQUAL => cmp fs
            | GREATER => GREATER)
-        | (mlibAtom _, _) => LESS
-        | (_, mlibAtom _) => GREATER
+        | (Atom _, _) => LESS
+        | (_, Atom _) => GREATER
         | (Not p1, Not p2) => cmp ((p1,p2) :: fs)
         | (Not _, _) => LESS
         | (_, Not _) => GREATER
@@ -10384,7 +10384,7 @@ fun freeIn v =
       fun f [] = false
         | f (True :: fms) = f fms
         | f (False :: fms) = f fms
-        | f (mlibAtom atm :: fms) = mlibAtom.freeIn v atm orelse f fms
+        | f (Atom atm :: fms) = mlibAtom.freeIn v atm orelse f fms
         | f (Not p :: fms) = f (p :: fms)
         | f (And (p,q) :: fms) = f (p :: q :: fms)
         | f (Or (p,q) :: fms) = f (p :: q :: fms)
@@ -10402,7 +10402,7 @@ local
   fun fv vs [] = vs
     | fv vs ((_,True) :: fms) = fv vs fms
     | fv vs ((_,False) :: fms) = fv vs fms
-    | fv vs ((bv, mlibAtom atm) :: fms) =
+    | fv vs ((bv, Atom atm) :: fms) =
       fv (mlibNameSet.union vs (mlibNameSet.difference (mlibAtom.freeVars atm) bv)) fms
     | fv vs ((bv, Not p) :: fms) = fv vs ((bv,p) :: fms)
     | fv vs ((bv, And (p,q)) :: fms) = fv vs ((bv,p) :: (bv,q) :: fms)
@@ -10434,11 +10434,11 @@ local
       case fm of
         True => fm
       | False => fm
-      | mlibAtom (p,tms) =>
+      | Atom (p,tms) =>
         let
           val tms' = mlibSharing.map (mlibSubst.subst sub) tms
         in
-          if mlibPortable.pointerEqual (tms,tms') then fm else mlibAtom (p,tms')
+          if mlibPortable.pointerEqual (tms,tms') then fm else Atom (p,tms')
         end
       | Not p =>
         let
@@ -10498,7 +10498,7 @@ end;
 (* The equality relation.                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-fun mkEq a_b = mlibAtom (mlibAtom.mkEq a_b);
+fun mkEq a_b = Atom (mlibAtom.mkEq a_b);
 
 fun destEq fm = mlibAtom.destEq (destAtom fm);
 
@@ -10511,13 +10511,13 @@ fun destNeq (Not fm) = destEq fm
 
 val isNeq = can destNeq;
 
-fun mkRefl tm = mlibAtom (mlibAtom.mkRefl tm);
+fun mkRefl tm = Atom (mlibAtom.mkRefl tm);
 
 fun destRefl fm = mlibAtom.destRefl (destAtom fm);
 
 val isRefl = can destRefl;
 
-fun sym fm = mlibAtom (mlibAtom.sym (destAtom fm));
+fun sym fm = Atom (mlibAtom.sym (destAtom fm));
 
 fun lhs fm = fst (destEq fm);
 
@@ -10541,7 +10541,7 @@ and existentialName = mlibName.fromString "?";
 local
   fun demote True = mlibTerm.Fn (truthName,[])
     | demote False = mlibTerm.Fn (falsityName,[])
-    | demote (mlibAtom (p,tms)) = mlibTerm.Fn (p,tms)
+    | demote (Atom (p,tms)) = mlibTerm.Fn (p,tms)
     | demote (Not p) =
       let
         val ref s = mlibTerm.negation
@@ -10565,7 +10565,7 @@ local
   fun isQuant [mlibTerm.Var _, _] = true
     | isQuant _ = false;
 
-  fun promote (mlibTerm.Var v) = mlibAtom (v,[])
+  fun promote (mlibTerm.Var v) = Atom (v,[])
     | promote (mlibTerm.Fn (f,tms)) =
       if mlibName.equal f truthName andalso List.null tms then
         True
@@ -10586,7 +10586,7 @@ local
       else if mlibName.equal f existentialName andalso isQuant tms then
         Exists (mlibTerm.destVar (hd tms), promote (List.nth (tms,1)))
       else
-        mlibAtom (f,tms);
+        Atom (f,tms);
 in
   fun fromString s = promote (mlibTerm.fromString s);
 end;
@@ -10869,11 +10869,11 @@ fun isBinop rel = can (destBinop rel);
 
 (* Formulas *)
 
-fun toFormula (true,atm) = mlibFormula.mlibAtom atm
-  | toFormula (false,atm) = mlibFormula.Not (mlibFormula.mlibAtom atm);
+fun toFormula (true,atm) = mlibFormula.Atom atm
+  | toFormula (false,atm) = mlibFormula.Not (mlibFormula.Atom atm);
 
-fun fromFormula (mlibFormula.mlibAtom atm) = (true,atm)
-  | fromFormula (mlibFormula.Not (mlibFormula.mlibAtom atm)) = (false,atm)
+fun fromFormula (mlibFormula.Atom atm) = (true,atm)
+  | fromFormula (mlibFormula.Not (mlibFormula.Atom atm)) = (false,atm)
   | fromFormula _ = raise Error "mlibLiteral.fromFormula";
 
 (* ------------------------------------------------------------------------- *)

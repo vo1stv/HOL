@@ -16,8 +16,8 @@ folTools.uo: folTools.sml mlib.ui
 folTools.ui: folTools.sig mlib.ui
 	$(HOLMOSMLC) -c mlib.ui $<
 
-folMapping.uo: folMapping.sml mlib.ui matchTools.ui
-	$(HOLMOSMLC) -c mlib.ui matchTools.ui $<
+folMapping.uo: folMapping.sml mlib.ui extraTools.ui matchTools.ui
+	$(HOLMOSMLC) -c mlib.ui $<
 
 folMapping.ui: folMapping.sig mlib.ui
 	$(HOLMOSMLC) -c mlib.ui $<

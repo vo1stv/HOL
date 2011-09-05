@@ -17,6 +17,7 @@ struct
 open HolKernel Parse boolLib;
 
 infix THENR ## |->;
+infix --> |>
 
 type 'a pp    = 'a mlibPrint.pp;
 type term1    = mlibTerm.term;
@@ -34,12 +35,11 @@ val PINST      = matchTools.PINST;
 (* ------------------------------------------------------------------------- *)
 
 local
-  open mlibUseful;
+  open mlibUseful extraTools;
   val module = "folMapping";
 in
-  val () = traces := {module = module, alignment = I} :: !traces;
-  fun chatting l = tracing {module = module, level = l};
-  fun chat s = (trace s; true)
+  fun chatting l = !trace_level >= l
+  fun chat s = (trace (module^": "^s); true)
   val ERR = mk_HOL_ERR module;
   fun BUG f m = Bug (f ^ ": " ^ m);
 end;
@@ -132,7 +132,10 @@ fun REPEATR f : rule = repeat f;
 fun terms_to_string tms =
   String.concat (map (fn x => "\n" ^ Parse.term_to_string x) tms) ^ "\n";
 
-fun remove_type (mlibTerm.Fn (":", [tm, _])) = tm | remove_type tm = tm;
+val hasTypeFn = mlibName.fromString ":"
+
+fun remove_type (t as (mlibTerm.Fn (n, [tm, _]))) = if mlibName.equal n hasTypeFn then tm else t
+  | remove_type tm = tm;
 
 (* ------------------------------------------------------------------------- *)
 (* "new" variables can be instantiated; everything else is a local constant. *)
@@ -143,7 +146,7 @@ val FOL_PREFIX = "XXfolXX";
 local
   val tag        = mk_prefix FOL_PREFIX;
   val untag      = dest_prefix FOL_PREFIX;
-  val new_string = mlibUseful.int_to_string o mlibUseful.new_int;
+  val new_string = Int.toString o extraTools.new_int;
 in
   val fake_new_tyvar = mk_vartype o mk_prime o tag;
   val new_tyvar      = fake_new_tyvar o new_string;
@@ -372,89 +375,6 @@ fun mk_varconst s =
    else mk_var (s, alpha));
 
 (* ------------------------------------------------------------------------- *)
-(* Prettify FOL representations of HOL terms---WILL BREAK PROOF TRANSLATION! *)
-(* ------------------------------------------------------------------------- *)
-
-val prettify_fol = ref false;
-
-val type_op_map =
-  [("fun", "->"), ("prod", "*"), ("sum", "+")];
-
-val term_op_map =
-  [("min.=", "equality"), ("min.==>", "implication"),
-   ("bool.T", "truth"), ("bool.F", "falsity"), ("bool.~", "negation"),
-   ("bool./\\", "conjunction"), ("bool.\\/", "disjunction"),
-   ("bool.?", "existential"), ("bool.!", "universal"),
-   ("arithmetic.NUMERAL", "NUMERAL"), ("arithmetic.NUMERAL_BIT1", "BIT1"),
-   ("arithmetic.NUMERAL_BIT2", "BIT2"), ("arithmetic.ALT_ZERO", "ZERO")];
-
-local
-  val pr_op = possibly (fn x => assoc x type_op_map);
-  fun Var' v = mlibTerm.Var (if is_prime v then "_" ^ dest_prime v else v);
-  fun Fn' (f, a) = mlibTerm.Fn (f, a);
-in
-  fun prettify_type (mlibTerm.Var v)     = Var' v
-    | prettify_type (mlibTerm.Fn (f, a)) = Fn' (pr_op f, map prettify_type a);
-end;
-
-local
-  val dest = total (dest_prefix "%%genvar%%");
-in
-  fun prettify_varname s =
-    case dest s of SOME s' => "vg" ^ s'
-    | NONE => if !mlibTerm.var_string s then s else "v_" ^ s;
-end;
-
-local
-  local val dest = total (dest_prefix "%%genvar%%");
-  in fun pr_cname s = case dest s of SOME s' => "gv" ^ s' | NONE => s;
-  end;
-
-  fun pr_op s =
-    case assoc1 s term_op_map of SOME (_, s') => s'
-    | NONE => if is_const_name s then snd (dest_const_name s) else pr_cname s;
-
-  fun pr_fn s p a = (pr_op s, p a);
-
-  fun Var' v = mlibTerm.Var (prettify_varname v);
-  fun Fn' (f, a) = mlibTerm.Fn (f, a);
-in
-  fun prettify_term (mlibTerm.Var v) = Var' v
-    | prettify_term (mlibTerm.Fn (":", [tm, ty])) =
-    mlibTerm.Fn (":", [prettify_term tm, prettify_type ty])
-    | prettify_term (mlibTerm.Fn (f, a)) = Fn' (pr_fn f (map prettify_term) a);
-end;
-
-val prettify_formula =
-  let
-    open mlibTerm
-    fun pr True            = True
-      | pr False           = False
-      | pr (Atom tm)       = Atom (prettify_term tm)
-      | pr (Not f)         = Not (pr f)
-      | pr (And (f, g))    = And (pr f, pr g)
-      | pr (Or (f, g))     = Or (pr f, pr g)
-      | pr (Imp (f, g))    = Imp (pr f, pr g)
-      | pr (Iff (f, g))    = Iff (pr f, pr g)
-      | pr (Forall (v, f)) = Forall (prettify_varname v, pr f)
-      | pr (Exists (v, f)) = Exists (prettify_varname v, pr f)
-  in
-    pr
-  end;
-
-(*
-val pp_term1    = mlibUseful.pp_map prettify_term    mlibTerm.pp_term;
-val pp_formula1 = mlibUseful.pp_map prettify_formula mlibTerm.pp_formula;
-
-local
-  (* Don't make this visible: theorems deserve better protection *)
-  val prettify_thm = (mlibThm.AXIOM o map prettify_formula o mlibThm.clause);
-in
-  val pp_thm1 = mlibUseful.pp_map prettify_thm mlibThm.pp_thm;
-end;
-*)
-
-(* ------------------------------------------------------------------------- *)
 (* Translate a HOL type to FOL, and back again.                              *)
 (* ------------------------------------------------------------------------- *)
 
@@ -462,20 +382,20 @@ fun hol_type_to_fol tyV =
   let
     fun ty_to_fol hol_ty =
       if is_vartype hol_ty then
-        (if mem hol_ty tyV then mlibTerm.Var else (fn s => mlibTerm.Fn (s, [])))
+        (if mem hol_ty tyV then mlibTerm.Var o mlibName.fromString else (fn s => mlibTerm.Fn (mlibName.fromString s, [])))
         (dest_vartype hol_ty)
       else
         let val (f, args) = dest_type hol_ty
-        in mlibTerm.Fn (f, map ty_to_fol args)
+        in mlibTerm.Fn (mlibName.fromString f, map ty_to_fol args)
         end
   in
     ty_to_fol
   end;
 
-fun fol_type_to_hol (mlibTerm.Var v) = fake_new_tyvar (possibly dest_prime v)
+fun fol_type_to_hol (mlibTerm.Var v) = fake_new_tyvar (possibly dest_prime (mlibName.toString v))
   | fol_type_to_hol (mlibTerm.Fn (f, a)) =
-  if not (is_prime f) then mk_type (f, map fol_type_to_hol a)
-  else (assert (null a) (ERR "fol_type_to_hol" "bad prime"); mk_vartype f);
+  if not (is_prime (mlibName.toString f)) then mk_type (mlibName.toString f, map fol_type_to_hol a)
+  else (assert (null a) (ERR "fol_type_to_hol" "bad prime"); mk_vartype (mlibName.toString f));
 
 val fol_bool = hol_type_to_fol [] bool;
 
@@ -494,37 +414,37 @@ fun hol_term_to_fol (parm : parameters) (tmV, tyV) =
     val {with_types, higher_order, ...} = parm
     fun tmty2fol tm =
       if not with_types then tm2fol tm
-      else mlibTerm.Fn (":", [tm2fol tm, hol_type_to_fol tyV (type_of tm)])
+      else mlibTerm.Fn (hasTypeFn, [tm2fol tm, hol_type_to_fol tyV (type_of tm)])
     and tm2fol tm =
-      if mem tm tmV then mlibTerm.Var (fst (dest_var tm))
+      if mem tm tmV then mlibTerm.Var (mlibName.fromString (fst (dest_var tm)))
       else if higher_order then
         if is_comb tm then
           let val (a, b) = dest_comb tm
-          in mlibTerm.Fn ("%", [tmty2fol a, tmty2fol b])
+          in mlibTerm.Fn (mlibName.fromString "%", [tmty2fol a, tmty2fol b])
           end
-        else mlibTerm.Fn (dest_varconst tm, [])
+        else mlibTerm.Fn (mlibName.fromString(dest_varconst tm), [])
       else
         let
           val (f, args) = strip_comb tm
           val () = assert (not (mem f tmV)) (ERR "hol_term_to_fol" "ho term")
         in
-          mlibTerm.Fn (dest_varconst f, map tmty2fol args)
+          mlibTerm.Fn (mlibName.fromString(dest_varconst f), map tmty2fol args)
         end
   in
-    fn tm => (if !prettify_fol then prettify_term else I) (tmty2fol tm)
+    tmty2fol
   end;
 
 fun hol_atom_to_fol parm vs tm =
-  mlibTerm.Atom
+  mlibFormula.Atom
   (if is_eq tm then
      let val (a, b) = dest_eq tm
-     in mlibTerm.Fn ("=", map (hol_term_to_fol parm vs) [a, b])
+     in (mlibName.fromString "=", map (hol_term_to_fol parm vs) [a, b])
      end
-   else if #higher_order parm then mlibTerm.Fn ("$", [hol_term_to_fol parm vs tm])
-   else remove_type (hol_term_to_fol parm vs tm));
+   else if #higher_order parm then (mlibName.fromString "$", [hol_term_to_fol parm vs tm])
+   else mlibTerm.destFn (remove_type (hol_term_to_fol parm vs tm)));
 
 fun hol_literal_to_fol parm vars lit =
-  if is_neg lit then mlibTerm.Not (hol_atom_to_fol parm vars (dest_neg lit))
+  if is_neg lit then mlibFormula.Not (hol_atom_to_fol parm vars (dest_neg lit))
   else hol_atom_to_fol parm vars lit;
 
 (* ------------------------------------------------------------------------- *)
@@ -560,7 +480,8 @@ try hol_literals_to_fol {higher_order = false, with_types = false}
 
 fun fol_term_to_hol' ({higher_order, with_types = true, ...} : parameters) =
   let
-    fun tmty_to_hol (mlibTerm.Fn (":",[tm,ty])) = tm_to_hol (fol_type_to_hol ty) tm
+    fun tmty_to_hol (mlibTerm.Fn (n,[tm,ty])) = if mlibName.equal n hasTypeFn then tm_to_hol (fol_type_to_hol ty) tm
+        else raise ERR "fol_term_to_hol" "missing type information"
       | tmty_to_hol _ = raise ERR "fol_term_to_hol" "missing type information"
     and tm_to_hol ty (mlibTerm.Var v) = fake_new_var (v, ty)
       | tm_to_hol ty (mlibTerm.Fn (fname, args)) =
@@ -611,19 +532,25 @@ fun fol_term_to_hol parm fol_tm =
       hol_tm
     end;
 
-fun fol_atom_to_hol parm (mlibTerm.Atom (mlibTerm.Fn ("=", [x, y]))) =
-  unify_mk_eq (fol_term_to_hol parm x, fol_term_to_hol parm y)
-  | fol_atom_to_hol parm fm =
-  (cast_to bool o fol_term_to_hol parm)
-  let
-    val {higher_order, with_types} = parm
-  in
-    case (higher_order, with_types, fm) of
-      (true,  _,     mlibTerm.Atom (mlibTerm.Fn ("$", [tm]))) => tm
-    | (false, true,  mlibTerm.Atom tm) => mlibTerm.Fn (":", [tm, fol_bool])
-    | (false, false, mlibTerm.Atom tm) => tm
-    | _ => raise BUG "fol_atom_to_fol" "malformed atom"
-  end;
+local
+  fun else_case parm fm =
+    (cast_to bool o fol_term_to_hol parm)
+    let
+      val {higher_order, with_types} = parm
+    in
+      case (higher_order, with_types, fm) of
+        (true,  _,     mlibTerm.Atom (mlibTerm.Fn ("$", [tm]))) => tm
+      | (false, true,  mlibTerm.Atom tm) => mlibTerm.Fn (":", [tm, fol_bool])
+      | (false, false, mlibTerm.Atom tm) => tm
+      | _ => raise BUG "fol_atom_to_fol" "malformed atom"
+    end;
+in
+fun fol_atom_to_hol parm (fm as (mlibTerm.Atom (mlibTerm.Fn (n, [x, y])))) =
+  if mlibName.equal n (mlibName.fromString "=") then
+    unify_mk_eq (fol_term_to_hol parm x, fol_term_to_hol parm y)
+  else else_case parm fm
+  | fol_atom_to_hol parm fm = else_case parm fm
+end
 
 fun fol_literal_to_hol _ mlibTerm.True = T
   | fol_literal_to_hol _ mlibTerm.False = F
