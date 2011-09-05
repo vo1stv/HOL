@@ -1,32 +1,32 @@
 metisLib.uo: metisLib.sml mlib.uo
-	$(HOLMOSMLC) -c mlib.ui mlib.uo $<
+	$(HOLMOSMLC) -c mlib.ui $<
 
 metisLib.ui: metisLib.sig mlib.uo
-	$(HOLMOSMLC) -c mlib.ui mlib.uo metisTools.ui metisTools.uo $<
+	$(HOLMOSMLC) -c mlib.ui metisTools.ui $<
 
-metisTools.uo: metisTools.sml mlib.uo
-	$(HOLMOSMLC) -c mlib.ui mlib.uo $<
+metisTools.uo: metisTools.sml mlib.ui
+	$(HOLMOSMLC) -c mlib.ui $<
 
-metisTools.ui: metisTools.sig mlib.uo
-	$(HOLMOSMLC) -c mlib.ui mlib.uo $<
+metisTools.ui: metisTools.sig mlib.ui
+	$(HOLMOSMLC) -c mlib.ui $<
 
-matchTools.uo: matchTools.sml mlib.uo
-	$(HOLMOSMLC) -c mlib.ui mlib.uo $<
+matchTools.uo: matchTools.sml mlib.ui
+	$(HOLMOSMLC) -c mlib.ui $<
 
-matchTools.ui: matchTools.sig mlib.uo
-	$(HOLMOSMLC) -c mlib.ui mlib.uo $<
+matchTools.ui: matchTools.sig mlib.ui
+	$(HOLMOSMLC) -c mlib.ui $<
 
-folTools.uo: folTools.sml mlib.uo
-	$(HOLMOSMLC) -c mlib.ui mlib.uo $<
+folTools.uo: folTools.sml mlib.ui
+	$(HOLMOSMLC) -c mlib.ui $<
 
-folTools.ui: folTools.sig mlib.uo
-	$(HOLMOSMLC) -c mlib.ui mlib.uo $<
+folTools.ui: folTools.sig mlib.ui
+	$(HOLMOSMLC) -c mlib.ui $<
 
-folMapping.uo: folMapping.sml mlib.uo
-	$(HOLMOSMLC) -c mlib.ui mlib.uo $<
+folMapping.uo: folMapping.sml mlib.ui
+	$(HOLMOSMLC) -c mlib.ui $<
 
-folMapping.ui: folMapping.sig mlib.uo
-	$(HOLMOSMLC) -c mlib.ui mlib.uo $<
+folMapping.ui: folMapping.sig mlib.ui
+	$(HOLMOSMLC) -c mlib.ui $<
 
-mlib.uo: mlib.sml
+mlib.uo mlib.ui: mlib.sml
 	$(HOLMOSMLC) -toplevel -c $<

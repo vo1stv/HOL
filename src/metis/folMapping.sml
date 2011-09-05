@@ -18,9 +18,9 @@ open HolKernel Parse boolLib;
 
 infix THENR ## |->;
 
-type 'a pp    = 'a mlibUseful.pp;
+type 'a pp    = 'a mlibPrint.pp;
 type term1    = mlibTerm.term;
-type formula1 = mlibTerm.formula;
+type formula1 = mlibFormula.formula;
 type thm1     = mlibThm.thm;
 type vars     = term list * hol_type list;
 
@@ -240,33 +240,47 @@ try unify_list_mk_comb (``COND``, new_tyvars [``HD x``, ``CONS x``, ``I``]);
 (* Worker theorems for first-order proof translation.                        *)
 (* ------------------------------------------------------------------------- *)
 
-val HIDE_LITERAL = prove
-  (``!a. a ==> ~a ==> F``,
-   tautLib.TAUT_TAC);
-
-val SHOW_LITERAL = prove
-  (``!x. (~x ==> F) ==> x``,
-   tautLib.TAUT_TAC);
-
-val INITIALIZE_CLAUSE = prove
-  (``!a b. a \/ b ==> ~a ==> b``,
-   tautLib.TAUT_TAC);
-
-val FINALIZE_CLAUSE = prove
-  (``!a b. (~a ==> b) ==> (a \/ b)``,
-   tautLib.TAUT_TAC);
-
-val RESOLUTION = prove
-  (``!a. a /\ ~a ==> F``,
-   tautLib.TAUT_TAC);
-
-val EQUAL_STEP = prove
-  (``!a b c. ((a ==> (b = c)) /\ b) ==> ~a \/ c``,
-   tautLib.TAUT_TAC);
-
-val EXCLUDED_MIDDLE' = prove
-  (``!t. ~t \/ t``,
-   tautLib.TAUT_TAC);
+local
+  val a = mk_var("a", bool)
+  val b = mk_var("b", bool)
+  val c = mk_var("c", bool)
+  val nega = mk_neg a
+  val a_th = ASSUME a
+  val nega_th = ASSUME nega
+  val acontr = EQ_MP (EQF_INTRO nega_th) a_th
+in
+(* !a. a ==> ~a ==> F`` *)
+val HIDE_LITERAL = acontr |> DISCH nega |> DISCH a |> GEN a
+(* !x. (~x ==> F) ==> x *)
+val SHOW_LITERAL =
+    MP (ASSUME (mk_imp(nega, F))) nega_th |> CCONTR a |> DISCH_ALL |> GEN a
+       |> CONV_RULE (RENAME_VARS_CONV ["x"])
+(* !a b. a \/ b ==> ~a ==> b *)
+val INITIALIZE_CLAUSE =
+    DISJ_CASES (ASSUME (mk_disj(a,b))) (CCONTR b acontr) (ASSUME b) |>
+               DISCH nega |> DISCH_ALL |> GENL [a,b]
+(* !a b. (~a ==> b) ==> (a \/ b) *)
+val FINALIZE_CLAUSE =
+  DISJ_CASES (SPEC a EXCLUDED_MIDDLE) (DISJ1 (ASSUME a) b)
+             (MP (ASSUME (mk_imp(nega, b))) (ASSUME nega) |> DISJ2 a) |>
+             DISCH_ALL |> GENL [a,b]
+(* !a. a /\ ~a ==> F *)
+val RESOLUTION = let
+  val (a_th,nega_th) = CONJ_PAIR (ASSUME (mk_conj(a,nega)))
+in
+  acontr |> PROVE_HYP a_th |> PROVE_HYP nega_th |> DISCH_ALL |> GEN a
+end
+(* !a b c. ((a ==> (b = c)) /\ b) ==> ~a \/ c *)
+val EQUAL_STEP = let
+  val (imp, b_th) = CONJ_PAIR (ASSUME (mk_conj(mk_imp(a,mk_eq(b,c)), b)))
+in
+  DISJ_CASES (SPEC a EXCLUDED_MIDDLE)
+             (EQ_MP (MP imp a_th) b_th |> DISJ2 nega)
+             (DISJ1 (ASSUME nega) c) |> DISCH_ALL |> GENL [a,b,c]
+end
+(* !t. ~t \/ t *)
+val EXCLUDED_MIDDLE' = ONCE_REWRITE_RULE [DISJ_COMM] EXCLUDED_MIDDLE
+end
 
 (* ------------------------------------------------------------------------- *)
 (* Operations on HOL literals and clauses.                                   *)
