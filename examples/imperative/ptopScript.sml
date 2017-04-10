@@ -14,10 +14,10 @@ val _ = xDefine "bRefinement"
 	`v [=. u = !(s:'a) (s':'b). u s s' ==> v s s'`
 ;
 
-val _ = Define `abort = \(s:'a) (s':'b). T`;
-val _ = Define `magic = \(s:'a) (s':'b). F`;
+val _ = xDefine "ptopABORT" `abort = \(s:'a) (s':'b). T`;
+val _ = xDefine "ptopMAGIC" `magic = \(s:'a) (s':'b). F`;
  
-val _ = Define `assign x e s s' = 
+val _ = xDefine "ptopASSIGN" `assign x e s s' = 
 			!y. 
 				if x = y then 
 					(s' y) = (e s)
@@ -27,9 +27,9 @@ val _ = Define `assign x e s s' =
 ;
 
 
-val _ = Define `sc f g s s' = (? s'' . f s s'' /\ g s'' s' ) ` ;
+val _ = xDefine "ptopSC" `sc f g s s' = (? s'' . f s s'' /\ g s'' s' ) ` ;
 
-val _ = Define `subs f x e s s'
+val _ = xDefine "ptopSUBS" `subs f x e s s'
               = (let s'' = \y. if x=y then e s else s y
                   in f s'' s') `;
 

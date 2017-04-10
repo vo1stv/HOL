@@ -46,8 +46,7 @@ val tprint = testutils.tprint;
 
 fun test_fail blame f e = let
   val res = (f e ; SOME "should fail!")
-              handle HolSatLib.SAT_cex _ => SOME "unexpected counterexample!"
-                   | HOL_ERR {origin_function,...} =>
+              handle HOL_ERR {origin_function,...} =>
                        if origin_function = blame then
                          NONE
                        else
@@ -155,7 +154,11 @@ is satisfied by $y:=1;x:=y$. (here the semicolon is used to indicate sequential 
  
 \begin{lstlisting} % *)
 
-fun testRefinement rhsProgLhsSpec = let	val	
+fun verifyXf_EQ_1_AND_Yf_EQ_1 rhsProg = let	val
+		lhsSpec = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a)) = 1)))``
+	in let val
+		rhsProgLhsSpec=mk_icomb(mk_icomb(REFINEMENT_RATOR,lhsSpec),rhsProg)	
+	in let val
 		lemma = 
 	 		(UNDISCH_ALL (#1 (EQ_IMP_RULE (EVAL (mk_comb(mk_comb ((rand rhsProgLhsSpec),``s:'a->num``),``s':'a->num``))))))
 						(*	[
@@ -231,8 +234,8 @@ fun testRefinement rhsProgLhsSpec = let	val
 									(s'' y = 1) /\ (s'' y = 1 )
 						*)
 			THEN
-				(CONJ_TAC THENL
-					[(
+				(CONJ_TAC THEN
+					(REPEAT
 						(* 	[ 	
 								 !y'. if x = y' then s' y' = s'' y else s' y' = s'' y'
 							,
@@ -250,30 +253,26 @@ fun testRefinement rhsProgLhsSpec = let	val
 								)
 							)
 						)
-					),(
-						(ACCEPT_TAC
-							(
-								EVAL_RULE 
-									(
-										(SPECL [``y:'a``]	(ASSUME (#1(dest_conj (beta_conv(mk_comb((rand (concl  lemma)),``s'':'a->num``)))))))
-									)
-							)
-						)
-					)]
+					)
 				)
 			)
 		)
 	end
+	end
+	end
+;
 
-val rhsProgRefinesLhsSpec = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a)) = 1))) [=. (sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y))))``; 
-val badImplementation = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a)) = 2))) [=. (sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y))))``; 
+val goodImplementation = ``(sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y ))))``; 
+(* val badImplementation = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 2 ) /\ ((s' (y:'a)) = 1))) [=. (sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y))))``;  *)
+val badImplementation = ``(sc (assign y (\ (s:'a->num).(s x))) (assign x (\ (s:'a->num).1 )))``;
 
 val _ = tprint ("some implementation refines given specification: " );
-val _ = testRefinement(rhsProgRefinesLhsSpec) handle HOL_ERR _ => die "rhsProgRefinesLhsSpec FAILED";
+val _ = verifyXf_EQ_1_AND_Yf_EQ_1 goodImplementation handle HOL_ERR _ => die "rhsProgRefinesLhsSpec FAILED";
+(* val _ = testRefinement(rhsProgRefinesLhsSpec) handle HOL_ERR _ => die "rhsProgRefinesLhsSpec FAILED"; *)
 val _ = OK();
 
 val _ = tprint ("some implementation DOES NOT refine given specification: " );
-val _ = test_fail "ACCEPT_TAC" testRefinement badImplementation;
+val _ = test_fail "GSUBST_TAC" verifyXf_EQ_1_AND_Yf_EQ_1 badImplementation;
 
 (* \end{lstlisting} % 
 
