@@ -29,11 +29,19 @@ fun APPLY_DEFINITIONS_TAC definitions =
 		(BETA_TAC)
 ;
 
+(*
 val REFINEMENT_RATOR = rator(rator(``u [=. v``));
 
-fun REFINEMENT_RULE th = APPLY_DEFINITIONS_TO_THEOREM [ptopTheory.bRefinement_def] th ;
+val REFINEMENT_NOT_RATOR = rator(rator(``u [<>. v``));
+*)
 
-val REFINEMENT_TAC = APPLY_DEFINITIONS_TAC [ptopTheory.bRefinement_def];
+val REFINEMENT_RATOR = ``$[=.``;
+
+val REFINEMENT_NOT_RATOR = ``$[<>.``;
+
+fun REFINEMENT_RULE th = APPLY_DEFINITIONS_TO_THEOREM [ptopTheory.bRefinement_def,ptopTheory.bRefinementNot_def] th ;
+
+val REFINEMENT_TAC = APPLY_DEFINITIONS_TAC [ptopTheory.bRefinement_def, ptopTheory.bRefinementNot_def];
 
 
 fun SWAPLR_RULE th =(PURE_ONCE_REWRITE_RULE [EQ_SYM_EQ] th);

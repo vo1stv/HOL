@@ -10,8 +10,14 @@ val _ = save_thm("PTOP_REJECT_IN_PLACE",UNDISCH (tautRejectInPlace));
 
 val _ = set_fixity "[=." (Infixl 500);
 
+val _ = set_fixity "[<>." (Infixl 500);
+
 val _ = xDefine "bRefinement" 
 	`v [=. u = !(s:'a) (s':'b). u s s' ==> v s s'`
+;
+
+val _ = xDefine "bRefinementNot" 
+	`v [<>. u = ?(s:'a) (s':'b). ~((u s s') ==> (v s s'))`
 ;
 
 val _ = xDefine "ptopABORT" `abort = \(s:'a) (s':'b). T`;

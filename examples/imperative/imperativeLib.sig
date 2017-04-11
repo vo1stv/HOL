@@ -14,6 +14,8 @@ sig
 
 	val REFINEMENT_RATOR : term
 
+	val REFINEMENT_NOT_RATOR : term
+
 	val REFINEMENT_RULE : thm -> thm
 
 	val REFINEMENT_TAC : tactic

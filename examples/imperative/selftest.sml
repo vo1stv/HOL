@@ -44,11 +44,11 @@ val OK = testutils.OK
 val die = testutils.die
 val tprint = testutils.tprint;
 
-fun test_fail blame f e = let
-  val res = (f e ; SOME "should fail!")
+fun proveOtherwise blame shouldFail shouldPass e = let
+  val res = (shouldFail e ; SOME "should fail!")
               handle HOL_ERR {origin_function,...} =>
                        if origin_function = blame then
-                         NONE
+                         (shouldPass e; NONE)
                        else
                          SOME ("unexpected exception from " ^ origin_function)
 in
@@ -154,7 +154,7 @@ is satisfied by $y:=1;x:=y$. (here the semicolon is used to indicate sequential 
  
 \begin{lstlisting} % *)
 
-fun verifyXf_EQ_1_AND_Yf_EQ_1 rhsProg = let	val
+fun requiresXf_EQ_1_AND_Yf_EQ_1 rhsProg = let	val
 		lhsSpec = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a)) = 1)))``
 	in let val
 		rhsProgLhsSpec=mk_icomb(mk_icomb(REFINEMENT_RATOR,lhsSpec),rhsProg)	
@@ -198,14 +198,48 @@ fun verifyXf_EQ_1_AND_Yf_EQ_1 rhsProg = let	val
 									(s' x = 1) /\ (s' y = 1)
 						*)
 			THEN
-				(SUBST_TAC
-					[(
-						EVAL_RULE 												
-							(
-								(SPECL [``x:'a``]	(ASSUME ( #2(dest_conj (beta_conv(mk_comb((rand (concl  lemma)),``s'':'a->num``)))))))
-							)
-					)]
-				)
+				(METIS_TAC [])
+			)
+		)
+	end
+	end
+	end
+;
+
+fun canFailXf_EQ_1_AND_Yf_EQ_1 rhsProg = let	val
+		lhsSpec = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a)) = 1)))``
+	in let val
+		rhsProgLhsSpec=mk_icomb(mk_icomb(REFINEMENT_NOT_RATOR,lhsSpec),rhsProg)	
+	in let val
+		lemma = 
+	 		(UNDISCH_ALL (#1 (EQ_IMP_RULE (EVAL (mk_comb(mk_comb ((rand rhsProgLhsSpec),``s:'a->num``),``s':'a->num``))))))
+						(*	[
+								sc (assign y (\s. 1)) (assign x (\s. s y)) s s'
+							]	|-
+								    ?s''. 
+										(!y'. if y = y' then s'' y' = 1 else s'' y' = s y') 
+										/\
+										(!y'. if x = y' then s' y' = s'' y else s' y' = s'' y')
+						*)
+	in
+		prove 
+		(
+			rhsProgLhsSpec,
+			(
+				(REFINEMENT_TAC)
+						(*	[
+							]	|-
+									sc (assign y (\s. 1)) (assign x (\s. s y)) s s' ==> (s' x = 1) /\ (s' y = 1)
+						*)
+			THEN
+				(STRIP_TAC)	
+						(* 	[ 	
+								sc (assign y (\s. 1)) (assign x (\s. s y)) s s' 
+							]	|- 
+									(s' x = 1) /\ (s' y = 1)
+						*)
+			THEN 
+				(STRIP_ASSUME_TAC lemma)
 						(* 	[ 	
 								 !y'. if x = y' then s' y' = s'' y else s' y' = s'' y'
 							,
@@ -213,48 +247,10 @@ fun verifyXf_EQ_1_AND_Yf_EQ_1 rhsProg = let	val
 							,
 								 sc (assign y (\s. 1)) (assign x (\s. s y)) s s' 
 							]	|- 
-									(s'' y = 1) /\ (s' y = 1)
+									(s' x = 1) /\ (s' y = 1)
 						*)
 			THEN
-				(SUBST_TAC
-					[(
-						EVAL_RULE 												
-							(
-								(SPECL [``y:'a``]	(ASSUME ( #2(dest_conj (beta_conv(mk_comb((rand (concl  lemma)),``s'':'a->num``)))))))
-							)
-					)]
-				)
-						(* 	[ 	
-								 !y'. if x = y' then s' y' = s'' y else s' y' = s'' y'
-							,
-								 !y'. if y = y' then s'' y' = 1 else s'' y' = s y'
-							,
-								 sc (assign y (\s. 1)) (assign x (\s. s y)) s s' 
-							]	|- 
-									(s'' y = 1) /\ (s'' y = 1 )
-						*)
-			THEN
-				(CONJ_TAC THEN
-					(REPEAT
-						(* 	[ 	
-								 !y'. if x = y' then s' y' = s'' y else s' y' = s'' y'
-							,
-								 !y'. if y = y' then s'' y' = 1 else s'' y' = s y'
-							,
-								 sc (assign y ( \s. 1)) (assign x ( \s. s y)) s s' 
-							]	|- 
-									(s'' y = (1 :num))
-						*)				
-						(ACCEPT_TAC
-							(
-								EVAL_RULE 
-								(
-									(SPECL [``y:'a``]	(ASSUME (#1(dest_conj (beta_conv(mk_comb((rand (concl  lemma)),``s'':'a->num``)))))))
-								)
-							)
-						)
-					)
-				)
+				(METIS_TAC [])
 			)
 		)
 	end
@@ -263,16 +259,15 @@ fun verifyXf_EQ_1_AND_Yf_EQ_1 rhsProg = let	val
 ;
 
 val goodImplementation = ``(sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y ))))``; 
-(* val badImplementation = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 2 ) /\ ((s' (y:'a)) = 1))) [=. (sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y))))``;  *)
 val badImplementation = ``(sc (assign y (\ (s:'a->num).(s x))) (assign x (\ (s:'a->num).1 )))``;
 
 val _ = tprint ("some implementation refines given specification: " );
-val _ = verifyXf_EQ_1_AND_Yf_EQ_1 goodImplementation handle HOL_ERR _ => die "rhsProgRefinesLhsSpec FAILED";
+val _ = requiresXf_EQ_1_AND_Yf_EQ_1 goodImplementation handle HOL_ERR _ => die "rhsProgRefinesLhsSpec FAILED";
 (* val _ = testRefinement(rhsProgRefinesLhsSpec) handle HOL_ERR _ => die "rhsProgRefinesLhsSpec FAILED"; *)
 val _ = OK();
 
 val _ = tprint ("some implementation DOES NOT refine given specification: " );
-val _ = test_fail "GSUBST_TAC" verifyXf_EQ_1_AND_Yf_EQ_1 badImplementation;
+val _ = proveOtherwise "FOL_FIND" requiresXf_EQ_1_AND_Yf_EQ_1 canFailXf_EQ_1_AND_Yf_EQ_1 badImplementation;
 
 (* \end{lstlisting} % 
 
@@ -289,15 +284,17 @@ Swaps the left-hand and right-hand side of an equation, as required to apply the
 \item{STRIP_TAC,STRIP_ASSUME_TAC}
 
 Similar to DISCH_TAC, but decomposes assumptions to remove quantifiers and conjunctions so that they can be more readily used.
-\item{CONJ_TAC, EQ_TAC}
-
-If a theorem is in the form a conjunction, this breaks the goal into two sub-goals, one for the left-hand side,
-the other for the right-hand side.  EQ_TAC was not used in the example, but does the same for equations.
 
 \item{rand,rator,dest_conj,beta_conv,mk_comb, concl, etc}
 
 These are a variety of routines defined in the Term structure which are useful for extracting and transforming specific 
 terms into the form needed to prove a goal.
+
+\item{METIS_TAC}
+
+When an expression is reduced into a sufficienly atomic set of assumptions and a conclusion that follows trivially from this, 
+the HOL theorem prover provides a number of tactics that can be given hints (in the form of a theorem list) for how to 
+proceed automatically to complete the proof.  METIS_TAC is one such tactic.
 \end{enumerate}
 
 \section{Swapping Algorithms}
