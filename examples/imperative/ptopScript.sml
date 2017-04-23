@@ -23,15 +23,14 @@ val _ = xDefine "bRefinementNot"
 val _ = xDefine "ptopABORT" `abort = \(s:'a) (s':'b). T`;
 val _ = xDefine "ptopMAGIC" `magic = \(s:'a) (s':'b). F`;
  
-val _ = xDefine "ptopASSIGN" `assign x e s s' = 
-			!y. 
+val _ = xDefine "ptopASSIGN" `assign (x:'a) (e:('a->'b)->'b)  = 
+			\(s:'a->'b) (s':'a->'b) . !(y:'a). 
 				if x = y then 
 					(s' y) = (e s)
-                else 
+                                else 
 					(s' y) = (s y) 
 		` 
 ;
-
 
 val _ = xDefine "ptopSC" `sc f g s s' = (? s'' . f s s'' /\ g s'' s' ) ` ;
 
