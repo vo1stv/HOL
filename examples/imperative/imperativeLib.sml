@@ -100,4 +100,43 @@ fun EVAL_FOR_STATEVARS valList =
 	)
 ;
 
+fun DISTINCT_STATEVARS (boundVarAndType: term) (disjList: term) (asl : term list) =
+	if( is_disj(disjList) ) then (
+		let val lhsRhs = (dest_disj(disjList)) in 
+			let val asm = mk_forall ( boundVarAndType, ( mk_imp ( #2(lhsRhs), (mk_neg (#1(lhsRhs)) )  )  ) ) in
+				DISTINCT_STATEVARS boundVarAndType (#1(lhsRhs)) (asm :: asl)
+			end
+		end
+	) else
+		asl
+;
+
+fun DECL_NEXT_DISJLIST (boundVarAndType:term) (stateVars: term list) (disjList: term) =
+	if(null stateVars) then (
+		disjList
+	) else (
+		DECL_NEXT_DISJLIST boundVarAndType (tl stateVars) ( mk_disj ( disjList, (mk_eq ( boundVarAndType, (hd stateVars) ) ) ) )
+	)
+;
+
+fun DECL_DISJLIST (boundVarAndType:term) (stateVars: term list) =
+	if (null stateVars) then ( 
+		mk_eq (boundVarAndType,boundVarAndType )
+	) else (
+		DECL_NEXT_DISJLIST boundVarAndType (tl stateVars) ( mk_eq( boundVarAndType, (hd stateVars) ) )
+	)
+;
+
+fun DECL_STATEVARS (boundVarAndType : term) ( stateVars : term list) = 
+	let val disjList = (DECL_DISJLIST boundVarAndType stateVars)
+	in (	
+		if (null stateVars) then ( 
+			[]
+		) else (
+			DISTINCT_STATEVARS boundVarAndType disjList [ ( mk_forall (boundVarAndType,disjList) ) ]
+		)
+	) 
+	end
+;
+
 end

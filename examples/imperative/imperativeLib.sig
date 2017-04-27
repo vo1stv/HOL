@@ -35,4 +35,6 @@ sig
 	val MAKE_IT_NO  : thm -> tactic
 
 	val EVAL_FOR_STATEVARS : term list -> tactic
+
+	val DECL_STATEVARS : term -> term list -> term list
 end;

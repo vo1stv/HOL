@@ -24,11 +24,11 @@ val _ = xDefine "ptopABORT" `abort = \(s:'a) (s':'b). T`;
 val _ = xDefine "ptopMAGIC" `magic = \(s:'a) (s':'b). F`;
  
 val _ = xDefine "ptopASSIGN" `assign (x:'a) (e:('a->'b)->'b)  = 
-			\(s:'a->'b) (s':'a->'b) . !(y:'a). 
-				if x = y then 
-					(s' y) = (e s)
+			\(s:'a->'b) (s':'a->'b) . !(v:'a). 
+				if x = v then 
+					(s' v) = (e s)
                                 else 
-					(s' y) = (s y) 
+					(s' v) = (s v) 
 		` 
 ;
 
